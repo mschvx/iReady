@@ -13,8 +13,8 @@ type BarangayCenter = {
   lon: number;
 };
 
-// Generate 50 random barangay centers in Navotas
-const barangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => ({
+// Fallback random centers (used only until we load actual areaCodes)
+const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => ({
   adm4_pcode: `PH170000000${(i + 1).toString().padStart(2, "0")}`,
   lat:
     NAVOTAS_BOUNDS.minLat +
@@ -23,6 +23,27 @@ const barangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => (
     NAVOTAS_BOUNDS.minLon +
     Math.random() * (NAVOTAS_BOUNDS.maxLon - NAVOTAS_BOUNDS.minLon),
 }));
+
+// Tighter land-only bounds inside Navotas to reduce chance of water placement
+const NAVOTAS_LAND_BOUNDS = {
+  minLat: 14.655,
+  maxLat: 14.695,
+  minLon: 120.94,
+  maxLon: 120.99,
+};
+
+function getLatLonForCode(code: string): { lat: number; lon: number } {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < code.length; i++) {
+    h ^= code.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const t = (h % 100000) / 100000;
+  const u = ((h >>> 7) % 100000) / 100000;
+  const lat = NAVOTAS_LAND_BOUNDS.minLat + t * (NAVOTAS_LAND_BOUNDS.maxLat - NAVOTAS_LAND_BOUNDS.minLat);
+  const lon = NAVOTAS_LAND_BOUNDS.minLon + u * (NAVOTAS_LAND_BOUNDS.maxLon - NAVOTAS_LAND_BOUNDS.minLon);
+  return { lat, lon };
+}
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 
@@ -50,6 +71,13 @@ export const Home = (): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
   const [areaCodes, setAreaCodes] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // derive centers from areaCodes (first 50) or fallback
+  const barangayCenters: BarangayCenter[] = (areaCodes && areaCodes.length > 0)
+    ? areaCodes.slice(0, 50).map((c) => {
+        const { lat, lon } = getLatLonForCode(c);
+        return { adm4_pcode: c, lat, lon };
+      })
+    : fallbackBarangayCenters;
   const [mapCenter, setMapCenter] = useState({ lat: 14.6094, lon: 120.9942 });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");

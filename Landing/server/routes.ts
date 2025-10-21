@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import session from "express-session";
 import bcrypt from "bcryptjs";
 import { insertUserSchema } from "@shared/schema";
+import fs from "fs";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const SESSION_SECRET = process.env.SESSION_SECRET || "dev-secret-change-me";
@@ -139,11 +141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve ToReceive area codes for local searching
   app.get("/api/toreceive", async (_req, res) => {
     try {
-      // Read the Data/ToReceive.json file from project root
-      // Use dynamic import to keep TS happy in ESM/CommonJS mix
-      const path = require("path");
-      const fs = require("fs");
-      const filePath = path.resolve(process.cwd(), "Data", "ToReceive.json");
+      // Read the Data/ToReceive.json file from repository root
+      const filePath = path.resolve(__dirname, "..", "..", "Data", "ToReceive.json");
       if (!fs.existsSync(filePath)) {
         return res.status(500).json({ message: "ToReceive data not found" });
       }
@@ -154,6 +153,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("/api/toreceive error:", err);
       res.status(500).json({ message: "Failed to read ToReceive data" });
+    }
+  });
+
+  // Reverse lookup wrapper to classify if a point is water (keyword-based)
+  app.get('/api/reverse', async (req, res) => {
+    try {
+      const lat = req.query.lat as string | undefined;
+      const lon = req.query.lon as string | undefined;
+      if (!lat || !lon) return res.status(400).json({ message: 'lat and lon required' });
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=10&addressdetails=0`;
+      const response = await fetch(url, { headers: { 'User-Agent': 'iReady-App/1.0' } });
+      if (!response.ok) return res.status(502).json({ message: 'Reverse geocode failed' });
+      const data = await response.json();
+      const display = (data.display_name || '').toLowerCase();
+      const waterKeywords = ['sea','bay','ocean','lake','river','channel','canal','marina','harbor','harbour'];
+      const isWater = waterKeywords.some(k => display.includes(k));
+      res.json({ displayName: data.display_name || null, isWater });
+    } catch (err) {
+      console.error('/api/reverse error:', err);
+      res.status(500).json({ message: 'Reverse lookup failed' });
     }
   });
 
