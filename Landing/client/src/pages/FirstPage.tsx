@@ -8,6 +8,8 @@ export const FirstPage = (): JSX.Element => {
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
 
+  const overlayOpen = showLogin || showSignup;
+
   const handleAboutClick = () => {
     const aboutSection = document.getElementById("about-section");
     aboutSection?.scrollIntoView({ behavior: "smooth" });
@@ -26,7 +28,7 @@ export const FirstPage = (): JSX.Element => {
   return (
     <div className="bg-white w-full min-h-screen">
       {/* Fixed Header with iReady Logo */}
-      <header className="fixed top-0 left-0 w-full h-16 md:h-20 lg:h-24 z-[2000] bg-white shadow-sm">
+      <header className="fixed top-0 left-0 w-full h-16 md:h-20 lg:h-24 z-[4000] bg-white shadow-sm">
         <img
           className="w-full h-full object-cover"
           alt="iReady Header"
@@ -34,8 +36,8 @@ export const FirstPage = (): JSX.Element => {
         />
       </header>
 
-      {/* Navigation Overlay */}
-      <nav className="fixed top-0 right-0 z-[2100] flex gap-3 md:gap-4 pr-4 md:pr-8 pt-3 md:pt-4 lg:pt-6">
+      {/* Navigation Overlay (keep above overlays too) */}
+      <nav className="fixed top-0 right-0 z-[4100] flex gap-3 md:gap-4 pr-4 md:pr-8 pt-3 md:pt-4 lg:pt-6">
         <Button
           onClick={handleAboutClick}
           className="h-10 md:h-12 px-4 md:px-6 bg-gray-700 rounded-full hover:bg-gray-600 text-sm md:text-base"
@@ -50,8 +52,13 @@ export const FirstPage = (): JSX.Element => {
         </Button>
       </nav>
 
-      {/* Main Content - Below Fixed Header */}
-      <main className="pt-16 md:pt-20 lg:pt-24">
+      {/* Main Content - Below Fixed Header
+          When an overlay is open, blur + dim only the main area and disable pointer events */}
+      <main
+        className={`pt-16 md:pt-20 lg:pt-24 transition-all duration-200 ${
+          overlayOpen ? "filter blur-sm brightness-90 pointer-events-none" : ""
+        }`}
+      >
         {/* Hero Section: Map + Info Panel */}
         <section className="flex flex-col lg:flex-row min-h-[500px] md:min-h-[600px]">
           {/* Map Container - Takes up ~70% width on large screens, full width on mobile */}
