@@ -128,7 +128,7 @@ export const Account = (): JSX.Element => {
           </aside>
  
            {/* Center / right: main card (content centered inside card) */}
-          <section className="col-span-50 md:col-span-10">
+          <section className="col-span-50 md:col-span-0">
              <div className="bg-gray-100 rounded-2xl p-6 shadow-md text-center w-full">
                <h2 className="text-3xl md:text-4xl font-bold mb-3">Current Barangay Focus</h2>
 
