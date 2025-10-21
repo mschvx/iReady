@@ -171,20 +171,20 @@ export const Account = (): JSX.Element => {
       <main className="pt-16 md:pt-20 lg:pt-24 px-6">
         {/* centered two-column group: narrower max-width so it visually centers, and vertically centered */}
         <div className="max-w-7xl mx-auto h-[calc(100vh-6rem)] overflow-auto flex items-center justify-center">
-          <div className="grid gap-2 place-items-center min-h-full w-full max-w-7xl
+          <div className="grid gap-4 place-items-center min-h-full w-full max-w-7xl
                           grid-cols-1
                           md:[grid-template-columns:minmax(240px,360px)_minmax(0,3fr)]">
             {/* Left column: slightly wider profile card but still smaller than the main card */}
             <aside className="col-span-1 flex justify-center">
               {/* left card (smaller padding so group stays centered) */}
-              <div className="w-full bg-gray-100 rounded-2xl p-14 shadow-md text-center overflow-auto">
+              <div className="w-full bg-gray-100 rounded-2xl p-12 shadow-md text-center overflow-auto">
                 <img
                   src={avatarDataUrl}
                   alt={username}
                   className="w-40 h-40 rounded-full shadow-lg mb-4 object-cover mx-auto"
                 />
                 <div
-                  className="text-2xl md:text-3xl font-semibold text-center break-words break-all whitespace-normal max-w-full"
+                  className="text-2xl md:text-3xl font-semibold text-center whitespace-normal max-w-full"
                   title={username}
                 >
                   {username}
@@ -262,55 +262,117 @@ export const Account = (): JSX.Element => {
 
       {/* Edit modal overlay (lightweight, similar to login/signup style) */}
       {showEditModal && (
-        <div
-          className="fixed inset-0 z-[3200] flex items-center justify-center px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowEditModal(false)} />
-          <div className="relative w-full max-w-lg bg-white rounded-2xl p-6 mx-auto shadow-2xl z-10" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-3">Edit Profile</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Summary of organization</label>
-                <textarea value={editSummary} onChange={(e) => setEditSummary(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm" rows={3} />
+  <div
+    className="fixed inset-0 z-[3200] flex items-center justify-center bg-black/30"
+    role="dialog"
+    aria-modal="true"
+    onClick={() => setShowEditModal(false)}
+  >
+    <div
+      className="relative w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]
+                 transform transition-all duration-300 ease-out scale-100 opacity-100"
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        position: "absolute",
+      }}
+    >
+      <h3 className="text-lg font-semibold mb-3">Edit Profile</h3>
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium text-gray-700">Summary of organization</label>
+          <textarea
+            value={editSummary}
+            onChange={(e) => setEditSummary(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm"
+            rows={3}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">History of helped barangays</label>
+          <textarea
+            value={editHistory}
+            onChange={(e) => setEditHistory(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm"
+            rows={3}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Social media (add multiple)</label>
+          <div className="space-y-2 mt-2">
+            {editSocialList.map((s, idx) => (
+              <div key={idx} className="flex gap-2">
+                <input
+                  value={s}
+                  onChange={(e) => {
+                    const copy = [...editSocialList];
+                    copy[idx] = e.target.value;
+                    setEditSocialList(copy);
+                  }}
+                  className="flex-1 rounded-md border-gray-200 shadow-sm p-2 text-sm"
+                  placeholder="handle or URL"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const copy = [...editSocialList];
+                    copy.splice(idx, 1);
+                    setEditSocialList(copy);
+                  }}
+                  className="px-2 rounded-md bg-red-100 text-red-600 text-sm"
+                >
+                  Remove
+                </button>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">History of helped barangays</label>
-                <textarea value={editHistory} onChange={(e) => setEditHistory(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm" rows={3} />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Social media (add multiple)</label>
-                <div className="space-y-2 mt-2">
-                  {editSocialList.map((s, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <input value={s} onChange={(e) => {
-                        const copy = [...editSocialList]; copy[idx] = e.target.value; setEditSocialList(copy);
-                      }} className="flex-1 rounded-md border-gray-200 shadow-sm p-2 text-sm" placeholder="handle or URL" />
-                      <button type="button" onClick={() => {
-                        const copy = [...editSocialList]; copy.splice(idx,1); setEditSocialList(copy);
-                      }} className="px-2 rounded-md bg-red-100 text-red-600 text-sm">Remove</button>
-                    </div>
-                  ))}
-                  <button type="button" onClick={() => setEditSocialList((s) => [...s, ""])} className="text-sm text-blue-600 hover:underline">+ Add social</button>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm" placeholder="email@example.com" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Phone</label>
-                <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm" placeholder="0917-xxx-xxxx" />
-              </div>
-              <div className="flex justify-end gap-2 mt-3">
-                <button onClick={() => setShowEditModal(false)} className="px-3 py-1 rounded-md bg-gray-200 text-sm">Cancel</button>
-                <button onClick={saveDetails} className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm">Save</button>
-              </div>
-            </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setEditSocialList((s) => [...s, ""])}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              + Add social
+            </button>
           </div>
         </div>
-      )}
+        <div>
+          <label className="text-sm font-medium text-gray-700">Email</label>
+          <input
+            value={editEmail}
+            onChange={(e) => setEditEmail(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm"
+            placeholder="email@example.com"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-700">Phone</label>
+          <input
+            value={editPhone}
+            onChange={(e) => setEditPhone(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-200 shadow-sm p-2 text-sm"
+            placeholder="0917-xxx-xxxx"
+          />
+        </div>
+        <div className="flex justify-end gap-2 mt-3">
+          <button
+            onClick={() => setShowEditModal(false)}
+            className="px-3 py-1 rounded-md bg-gray-200 text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveDetails}
+            className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
