@@ -88,8 +88,8 @@ export const FirstPage = (): JSX.Element => {
 
             {/* Current Updates Card */}
             <div className="bg-gray-200 rounded-2xl p-6 md:p-8">
-              <h3 className="text-lg md:text-xl font-bold">
-                LIVE UPDATES
+              <h3 className="text-lg md:text-3xl font-extrabold">
+                - LIVE UPDATES -
               </h3>
             </div>
           </div>
