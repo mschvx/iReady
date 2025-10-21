@@ -3,8 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 
-export const SignUpOverlay = (): JSX.Element => {
+export const SignUpOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element => {
   const [, setLocation] = useLocation();
+  const close = () => {
+    if (onClose) onClose();
+    else setLocation("/");
+  };
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -55,83 +60,91 @@ export const SignUpOverlay = (): JSX.Element => {
   };
 
   return (
-  <div className="bg-white w-full min-h-screen">
-    {/* Fixed Header with iReady Logo */}
-    <header className="fixed top-0 left-0 w-full h-16 md:h-20 lg:h-24 z-[2000] bg-white shadow-sm">
-        <img
-          className="w-full h-full object-cover"
-          alt="iReady Header"
-          src="/figmaAssets/fixed.png"
-        />
-    </header>
-    <div className="bg-white border border-solid border-black w-full min-w-[1198px] min-h-[852px] flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-8 w-full max-w-[797px] px-8">
-        <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[72.6px] tracking-[0] leading-[normal] whitespace-nowrap">
-          SIGN UP
-        </h1>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* backdrop (homepage remains rendered underneath) */}
+      <div
+        className="absolute inset-0 bg-black/25 backdrop-blur-sm"
+        onClick={close}
+      />
 
-        {error && (
-          <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
+      {/* centered translucent panel */}
+      <div
+        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 w-full text-center">
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[48px] leading-none">
+            SIGN UP
+          </h1>
+
+          {error && (
+            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 w-full">
+            <Input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              disabled={isLoading}
+            />
+
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              disabled={isLoading}
+            />
+
+            <Input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              disabled={isLoading}
+            />
           </div>
-        )}
 
-        <div className="flex flex-col gap-6 w-full">
-          <Input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full h-[90px] bg-[#d9d9d9] rounded-[64px] border-0 px-8 text-xl"
+          <Button
+            type="submit"
             disabled={isLoading}
-          />
+            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-2 hover:bg-[#c9c9c9]/95"
+          >
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px]">
+              {isLoading ? "CREATING..." : "SUBMIT"}
+            </span>
+          </Button>
 
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-[90px] bg-[#d9d9d9] rounded-[64px] border-0 px-8 text-xl"
-            disabled={isLoading}
-          />
+          <div className="flex flex-col items-center gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => setLocation("/login")}
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
+            >
+              Have an account? Log In Instead
+            </button>
 
-          <Input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full h-[90px] bg-[#d9d9d9] rounded-[64px] border-0 px-8 text-xl"
-            disabled={isLoading}
-          />
-        </div>
-
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-[300px] h-[63px] bg-[#d9d9d9] rounded-[64px] hover:bg-[#c9c9c9] h-auto"
-        >
-          <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[36.7px] tracking-[0] leading-[normal] whitespace-nowrap">
-            {isLoading ? "CREATING..." : "SUBMIT"}
-          </span>
-        </Button>
-
-        <button
-          type="button"
-          onClick={() => setLocation("/login")}
-          className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[37.8px] tracking-[0] leading-[normal] whitespace-nowrap mt-8 bg-transparent border-0 cursor-pointer"
-        >
-          Have an account? Log In Instead
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setLocation("/")}
-          className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[28.4px] tracking-[0] leading-[normal] whitespace-nowrap mt-4 bg-transparent border-0 cursor-pointer"
-        >
-          BACK
-        </button>
-      </form>
+            <button
+              type="button"
+              onClick={close}
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[14px] bg-transparent border-0 cursor-pointer"
+            >
+              BACK
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
   );
 };
