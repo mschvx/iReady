@@ -98,6 +98,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!q) {
         return res.status(400).json({ message: "Search query is required" });
       }
+      // First try to match a local POI (simple substring/keyword match)
+      try {
+        const pois: Array<{ id: string; name: string; lat: number; lon: number; keywords?: string[] }> = require("./data/navotas_pois.json");
+        const qLower = q.toLowerCase().trim();
+        // Exact name substring match
+        let match = pois.find(p => p.name.toLowerCase().includes(qLower));
+        if (!match) {
+          // Keyword match
+          match = pois.find(p => (p.keywords || []).some(k => k.toLowerCase().includes(qLower) || qLower.includes(k.toLowerCase())));
+        }
+        if (match) {
+          return res.json({ lat: match.lat, lon: match.lon, displayName: match.name, source: "local" });
+        }
+      } catch (err) {
+        console.warn("Local POIs load failed:", err);
+        // continue to external geocode fallback
+      }
+
       const searchQuery = `${q}, Philippines`;
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`;
       const response = await fetch(url, {
@@ -111,9 +129,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Location not found" });
       }
       const { lat, lon, display_name } = data[0];
-      res.json({ lat: parseFloat(lat), lon: parseFloat(lon), displayName: display_name });
+      res.json({ lat: parseFloat(lat), lon: parseFloat(lon), displayName: display_name, source: "nominatim" });
     } catch (error) {
       console.error("Geocoding error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Simple POI search endpoint for client-side suggestions
+  app.get("/api/pois", async (req, res) => {
+    try {
+      const q = (req.query.q as string | undefined) || "";
+      const qLower = q.toLowerCase().trim();
+      const pois: Array<{ id: string; name: string; lat: number; lon: number; keywords?: string[] }> = require("./data/navotas_pois.json");
+      if (!qLower) {
+        return res.json({ results: pois.slice(0, 20) });
+      }
+      const results = pois.filter(p => {
+        if (p.name.toLowerCase().includes(qLower)) return true;
+        if ((p.keywords || []).some(k => k.toLowerCase().includes(qLower) || qLower.includes(k.toLowerCase()))) return true;
+        return false;
+      }).slice(0, 20);
+      res.json({ results });
+    } catch (err) {
+      console.error("POI search error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Search adm4 entries from Data/ToReceive.json
+  app.get("/api/adm4", async (req, res) => {
+    try {
+      const q = (req.query.q as string | undefined) || "";
+      const qLower = q.toLowerCase().trim();
+      // Load the ToReceive data from repository root
+      const path = require("path");
+      const toReceivePath = path.join(__dirname, "..", "..", "Data", "ToReceive.json");
+      const entries: Array<any> = require(toReceivePath);
+
+      if (!qLower) {
+        return res.json({ results: entries.slice(0, 20) });
+      }
+
+      // Exact adm4_pcode match
+      const exact = entries.find(e => (e.adm4_pcode || "").toLowerCase() === qLower);
+      if (exact) {
+        return res.json({ results: [exact] });
+      }
+
+      // Partial match (adm4_pcode contains query) or start-with
+      const results = entries.filter(e => (e.adm4_pcode || "").toLowerCase().includes(qLower)).slice(0, 20);
+      res.json({ results });
+    } catch (err) {
+      console.error("ADM4 search error:", err);
       res.status(500).json({ message: "Internal server error" });
     }
   });
