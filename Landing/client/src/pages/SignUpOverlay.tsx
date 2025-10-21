@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 
-export const SignUpOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element => {
+export const SignUpOverlay = ({
+  onClose,
+  onOpenLogin,
+}: {
+  onClose?: () => void;
+  onOpenLogin?: () => void;
+}): JSX.Element => {
   const [, setLocation] = useLocation();
   const close = () => {
     if (onClose) onClose();
@@ -61,17 +67,17 @@ export const SignUpOverlay = ({ onClose }: { onClose?: () => void }): JSX.Elemen
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      className="fixed inset-0 z-[3000] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
     >
-      {/* backdrop (homepage remains rendered underneath) */}
+      {/* simple translucent backdrop (no backdrop-blur) */}
       <div
-        className="absolute inset-0 bg-black/25 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30"
         onClick={close}
       />
 
-      {/* centered translucent panel */}
+      {/* centered white panel */}
       <div
         className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-md"
         onClick={(e) => e.stopPropagation()}

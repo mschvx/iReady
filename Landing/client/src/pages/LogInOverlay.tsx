@@ -55,15 +55,14 @@ export const LogInOverlay = ({
   };
 
   return (
-    // fixed full-screen overlay with translucent blurred backdrop so homepage shows through
     <div
       className="fixed inset-0 z-[3000] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
     >
-      {/* blurred translucent backdrop: clicking it closes the overlay */}
+      {/* simple translucent backdrop (no backdrop-blur) */}
       <div
-        className="absolute inset-0 bg-black/25 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30"
         onClick={close}
       />
 
