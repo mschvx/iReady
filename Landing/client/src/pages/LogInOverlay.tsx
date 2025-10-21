@@ -1,10 +1,15 @@
-// ...existing code...
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 
-export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element => {
+export const LogInOverlay = ({
+  onClose,
+  onOpenSignUp,
+}: {
+  onClose?: () => void;
+  onOpenSignUp?: () => void;
+}): JSX.Element => {
   const [, setLocation] = useLocation();
   const close = () => {
     if (onClose) onClose();
@@ -52,7 +57,7 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
   return (
     // fixed full-screen overlay with translucent blurred backdrop so homepage shows through
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      className="fixed inset-0 z-[3000] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
     >
@@ -64,11 +69,11 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
 
       {/* centered panel; stop clicks from reaching backdrop */}
       <div
-        className="relative w-full max-w-md bg-white/95 backdrop-saturate-150 border border-black/10 rounded-2xl p-8 mx-auto"
+        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-md"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6 w-full text-center">
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[56px] leading-none">
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[48px] leading-none">
             LOG IN
           </h1>
 
@@ -84,7 +89,7 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full h-[72px] bg-[#d9d9d9] rounded-[64px] border-0 px-6 text-lg text-center"
+              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
 
@@ -93,7 +98,7 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-[72px] bg-[#d9d9d9] rounded-[64px] border-0 px-6 text-lg text-center"
+              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
           </div>
@@ -101,9 +106,9 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[260px] bg-[#d9d9d9] rounded-[64px] hover:bg-[#c9c9c9] h-auto"
+            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-2 hover:bg-[#c9c9c9]/95"
           >
-            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[24px]">
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px]">
               {isLoading ? "LOADING..." : "SUBMIT"}
             </span>
           </Button>
@@ -111,8 +116,14 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
           <div className="flex flex-col items-center gap-2 mt-4">
             <button
               type="button"
-              onClick={() => setLocation("/signup")}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[18px] bg-transparent border-0 cursor-pointer"
+              onClick={() => {
+                if (onOpenSignUp) {
+                  onOpenSignUp();
+                } else {
+                  setLocation("/signup");
+                }
+              }}
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
             >
               New? Sign Up
             </button>
@@ -120,7 +131,7 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
             <button
               type="button"
               onClick={close}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[14px] bg-transparent border-0 cursor-pointer"
             >
               BACK
             </button>
@@ -130,4 +141,3 @@ export const LogInOverlay = ({ onClose }: { onClose?: () => void }): JSX.Element
     </div>
   );
 };
-// ...existing code...
