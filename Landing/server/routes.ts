@@ -138,6 +138,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Serve Navotas POIs (simple local lookup and optional filtering)
+  app.get('/api/pois', async (req, res) => {
+    try {
+      // load the local POI file for Navotas
+      const pois: Array<{ id: string; name: string; lat: number; lon: number; keywords?: string[] }> = require('./data/navotas_pois.json');
+      const q = (req.query.q as string | undefined || '').toLowerCase().trim();
+      if (q) {
+        const results = pois.filter(p => p.name.toLowerCase().includes(q) || (p.keywords || []).some(k => k.toLowerCase().includes(q)));
+        return res.json({ results });
+      }
+      if (req.query.all !== undefined) {
+        return res.json({ results: pois });
+      }
+      // default: return a subset
+      res.json({ results: pois.slice(0, 25) });
+    } catch (err) {
+      console.error('/api/pois error:', err);
+      res.status(500).json({ message: 'Failed to load POIs' });
+    }
+  });
+
   // Serve ToReceive area codes for local searching
   app.get("/api/toreceive", async (_req, res) => {
     try {
