@@ -198,3 +198,4 @@ def train_rf_model():
     rf.fit(X_train, y_train)
 
     return rf, X_test, y_test
+
