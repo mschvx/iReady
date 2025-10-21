@@ -113,6 +113,16 @@ export const Account = (): JSX.Element => {
               className="w-32 h-32 rounded-full shadow-lg mb-4 object-cover"
             />
             <div className="text-2xl md:text-3xl font-semibold">{username}</div>
+
+            {/* Red logout button placed directly below the username */}
+            <button
+              onClick={logout}
+              className="mt-3 bg-red-500 text-white px-4 py-2 rounded-full shadow-sm hover:opacity-90 text-sm"
+              aria-label="Log out"
+            >
+              Log out
+            </button>
+
             <div className="text-base text-gray-600 mt-4">other info</div>
             <div className="text-base text-gray-600 mt-2">like location</div>
           </aside>
