@@ -128,41 +128,39 @@ export const Account = (): JSX.Element => {
           </aside>
  
            {/* Center / right: main card (content centered inside card) */}
-          <section className="col-span-12 md:col-span-9 lg:col-span-10 w-full bg-gray-100 rounded-2xl p-6 shadow-md">
-             <div className="p-6 shadow-md text-center w-full">
-               <h2 className="text-3xl md:text-4xl font-bold mb-3">Current Barangay Focus</h2>
+          <section className="col-span-12 md:col-span-9 lg:col-span-10 w-full bg-gray-100 rounded-2xl p-6 shadow-md text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-3">Current Barangay Focus</h2>
 
-               <div className="mb-2">
-                 <a
-                   href="#"
-                   className="text-blue-600 inline-flex items-center text-lg font-medium underline"
-                   onClick={(e) => e.preventDefault()}
-                 >
-                   ↗&nbsp; Baranggay Name
-                 </a>
-               </div>
+              <div className="mb-2">
+                <a
+                  href="#"
+                  className="text-blue-600 inline-flex items-center text-lg font-medium underline"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  ↗&nbsp; Baranggay Name
+                </a>
+              </div>
 
-               <div className="text-base text-gray-600">location</div>
-               <div className="text-base text-gray-600 mb-4">residents num</div>
+              <div className="text-base text-gray-600">location</div>
+              <div className="text-base text-gray-600 mb-4">residents num</div>
 
-               <div className="mt-4">
-                 <div className="bg-white rounded-2xl border-4 border-blue-300 p-6 h-64 shadow-inner">
-                   <h3 className="text-2xl font-semibold mb-3">Checklist</h3>
-                   <div className="text-base text-gray-600">{/* checklist items go here */}</div>
-                 </div>
-               </div>
-             </div>
+              <div className="mt-4">
+                <div className="bg-white rounded-2xl border-4 border-blue-300 p-6 h-64 shadow-inner">
+                  <h3 className="text-2xl font-semibold mb-3">Checklist</h3>
+                  <div className="text-base text-gray-600">{/* checklist items go here */}</div>
+                </div>
+              </div>
 
-             {/* bottom action (align to the right) */}
-             <div className="flex justify-end mt-6">
-               <button
-                 onClick={goBack}
-                 className="bg-blue-400 text-white px-6 py-2 rounded-full shadow-sm hover:opacity-95"
-               >
-                 go back
-               </button>
-             </div>
-           </section>
+              {/* bottom action (align to the right) */}
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={goBack}
+                  className="bg-blue-400 text-white px-6 py-2 rounded-full shadow-sm hover:opacity-95"
+                >
+                  go back
+                </button>
+              </div>
+          </section>
          </div>
        </main>
      </div>
