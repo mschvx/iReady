@@ -48,7 +48,7 @@ export const FirstPage = (): JSX.Element => {
         </Button>
         <Button
           onClick={handleLoginClick}
-          className="h-10 md:h-12 px-4 md:px-6 bg-blue-600 rounded-full hover:bg-blue-700 text-sm md:text-base"
+          className="h-10 md:h-12 px-4 md:px-6 bg-sky-300 rounded-full hover:bg-blue-700 text-sm md:text-base text-shadow: 2px 2px 4px black;"
         >
           Log in
         </Button>
@@ -72,15 +72,15 @@ export const FirstPage = (): JSX.Element => {
           <div className="w-full lg:w-[30%] flex flex-col gap-4 p-4 md:p-6 bg-gray-50">
             {/* Call to Action Card */}
             <div className="bg-gray-200 rounded-2xl p-6 md:p-8">
-              <h2 className="text-2xl md:text-4xl font-bold mb-4">
+              <h2 className="text-2xl md:text-4xl font-extrabold mb-4 text-black">
                 Let's Prepare Now!
               </h2>
-              <p className="text-sm md:text-base text-gray-700 mb-6">
+              <p className="text-sm md:text-base text-black mb-6">
                 Collaborate with other units as you all aim to reach a common goal, help those in need.
               </p>
               <Button
                 onClick={handleLoginClick}
-                className="w-full h-12 bg-gray-900 rounded-lg hover:bg-gray-800 text-sm md:text-base font-semibold"
+                className="w-full h-12 bg-black rounded-lg text-white hover:bg-white hover:text-black md:text-l font-bold"
               >
                 LOG IN
               </Button>
