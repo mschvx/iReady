@@ -13,6 +13,14 @@ type BarangayCenter = {
   lon: number;
 };
 
+type NavotasPOI = {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  keywords?: string[];
+};
+
 // Fallback random centers (used only until we load actual areaCodes)
 const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => ({
   adm4_pcode: `PH170000000${(i + 1).toString().padStart(2, "0")}`,
@@ -70,7 +78,8 @@ export const Home = (): JSX.Element => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [areaCodes, setAreaCodes] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
+  const [poiCenters, setPoiCenters] = useState<NavotasPOI[]>([]);
   // derive centers from areaCodes (first 50) or fallback
   const barangayCenters: BarangayCenter[] = (areaCodes && areaCodes.length > 0)
     ? areaCodes.slice(0, 50).map((c) => {
@@ -89,6 +98,9 @@ export const Home = (): JSX.Element => {
 
   useEffect(() => {
     checkAuth();
+    // keep loading supplies predictions (previous behavior)
+    loadSupplies();
+
     // fetch local toreceive area codes for simple search
     (async () => {
       try {
@@ -96,6 +108,24 @@ export const Home = (): JSX.Element => {
         if (!resp.ok) return;
         const data = await resp.json();
         if (Array.isArray(data.codes)) setAreaCodes(data.codes);
+      } catch (err) {
+        // ignore
+      }
+    })();
+
+    // fetch all Navotas POIs (used to place accurate markers)
+    (async () => {
+      try {
+        const resp = await fetch('/api/pois?all=true');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const pois: NavotasPOI[] = data.results || data || [];
+        const waterKeywords = ['sea','bay','ocean','lake','river','channel','canal','marina','harbor','harbour','ferry','port'];
+        const filtered = pois.filter(p => {
+          const kw = p.keywords || [];
+          return !kw.some((k: string) => waterKeywords.some(w => k.toLowerCase().includes(w)));
+        });
+        setPoiCenters(filtered);
       } catch (err) {
         // ignore
       }
@@ -209,10 +239,12 @@ export const Home = (): JSX.Element => {
 
   // Fetch POI suggestions from server
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSuggestions([]);
-      setAdm4Suggestions([]);
-      setShowSuggestions(false);
+      if (!searchQuery.trim()) {
+        // clear both area-code suggestions and POI/adm4 suggestions when search is empty
+        setAreaSuggestions([]);
+        setSuggestions([]);
+        setAdm4Suggestions([]);
+        setShowSuggestions(false);
       return;
     }
 
@@ -331,29 +363,32 @@ export const Home = (): JSX.Element => {
             className="absolute inset-0"
             style={{ pointerEvents: 'none', zIndex: 2 }}
           >
-            {barangayCenters.map((b) => {
+            {(poiCenters.length > 0 ? poiCenters : barangayCenters).map((b: any, idx: number) => {
+              const lat = (b.lat as number) || 0;
+              const lon = (b.lon as number) || 0;
               // Convert lat/lon to x/y relative to the map bounding box
-              const x = ((b.lon - (mapCenter.lon - 0.01)) / 0.02) * 100;
-              const y = (1 - (b.lat - (mapCenter.lat - 0.01)) / 0.02) * 100;
+              const x = ((lon - (mapCenter.lon - 0.01)) / 0.02) * 100;
+              const y = (1 - (lat - (mapCenter.lat - 0.01)) / 0.02) * 100;
               // Only render if within bounds
               if (x < 0 || x > 100 || y < 0 || y > 100) return null;
+              const title = b.name || b.adm4_pcode || `poi-${idx}`;
               return (
                 <div
-                  key={b.adm4_pcode}
+                  key={b.id || b.adm4_pcode || idx}
                   style={{
                     position: "absolute",
                     left: `${x}%`,
                     top: `${y}%`,
                     transform: "translate(-50%, -50%)",
-                    width: 16,
-                    height: 16,
+                    width: 20,
+                    height: 20,
                     background: "#2563eb",
                     borderRadius: "50%",
                     border: "2px solid #fff",
-                    boxShadow: "0 0 4px #0003",
+                    boxShadow: "0 0 6px #0004",
                     zIndex: 3,
                   }}
-                  title={b.adm4_pcode}
+                  title={title}
                 />
               );
             })}
@@ -378,11 +413,11 @@ export const Home = (): JSX.Element => {
                   // update suggestions from areaCodes (simple substring match)
                   const q = v.trim().toLowerCase();
                   if (!q) {
-                    setSuggestions([]);
-                  } else {
-                    const matches = areaCodes.filter((c) => c.toLowerCase().includes(q)).slice(0, 10);
-                    setSuggestions(matches);
-                  }
+                      setAreaSuggestions([]);
+                    } else {
+                      const matches = areaCodes.filter((c) => c.toLowerCase().includes(q)).slice(0, 10);
+                      setAreaSuggestions(matches);
+                    }
                   setSearchError("");
                 }}
                 onKeyPress={handleKeyPress}
@@ -421,14 +456,14 @@ export const Home = (): JSX.Element => {
               <p className="text-red-600 text-sm mt-2 px-4">{searchError}</p>
             )}
             {/* Suggestions list */}
-            {suggestions.length > 0 && (
+            {areaSuggestions.length > 0 && (
               <div className="mt-2 bg-white rounded-md shadow-sm max-h-60 overflow-auto">
-                {suggestions.map((s) => (
+                {areaSuggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => {
                       setSearchQuery(s);
-                      setSuggestions([]);
+                      setAreaSuggestions([]);
                     }}
                     className="w-full text-left px-4 py-2 hover:bg-gray-100"
                   >
