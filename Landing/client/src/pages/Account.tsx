@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
-interface User {
+interface AppUser {
   id: string;
   username: string;
 }
@@ -12,15 +12,15 @@ export const Account = (): JSX.Element => {
   const goHome = () => setLocation("/home");
   const goBack = () => setLocation("/home");
 
-  // single source-of-truth for the user's name: "User"
+  // single source-of-truth for the user's name: `username`
   // read from localStorage (or your auth store). Falls back to placeholder.
-  const [User, setUser] = useState<string>(() => {
+  const [username, setUsername] = useState<string>(() => {
     return (localStorage.getItem("username") || localStorage.getItem("displayName") || "Name Surname");
   });
 
   useEffect(() => {
     const stored = localStorage.getItem("username") || localStorage.getItem("displayName");
-    if (stored && stored.trim().length > 0) setUser(stored);
+    if (stored && stored.trim().length > 0) setUsername(stored);
   }, []);
 
   const getInitials = (name: string) =>
@@ -36,8 +36,8 @@ export const Account = (): JSX.Element => {
     return `hsl(${hue} 60% 55%)`;
   };
   const avatarDataUrl = useMemo(() => {
-    const initials = getInitials(User || "U");
-    const bg = stringToColor(User || "user");
+    const initials = getInitials(username || "U");
+    const bg = stringToColor(username || "user");
     const size = 160;
     const fontSize = 64;
     const svg = `
@@ -47,15 +47,15 @@ export const Account = (): JSX.Element => {
       </svg>
     `.trim();
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-  }, [User]);
+  }, [username]);
 
   // allow editing the user's name (persists to localStorage and updates `User`)
   const handleEditName = () => {
-    const newName = prompt("Enter display name", User || "");
+    const newName = prompt("Enter display name", username || "");
     if (newName !== null) {
       const trimmed = newName.trim();
       if (trimmed.length > 0) {
-        setUser(trimmed);
+        setUsername(trimmed);
         localStorage.setItem("username", trimmed);
         localStorage.setItem("displayName", trimmed);
       }
@@ -67,7 +67,7 @@ export const Account = (): JSX.Element => {
     localStorage.removeItem("username");
     localStorage.removeItem("displayName");
     localStorage.removeItem("token");
-    setUser("");
+    setUsername("");
     setLocation("/");
   };
 
@@ -104,74 +104,59 @@ export const Account = (): JSX.Element => {
 
       {/* Main content */}
       <main className="pt-16 md:pt-20 lg:pt-24 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 items-start">
-          {/* Left column: avatar + info (centered within its column) */}
-          <aside className="col-span-12 md:col-span-3 flex flex-col items-center text-center">
+        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 items-center justify-items-center min-h-[calc(100vh-6rem)]">
+           {/* Left column: avatar + info (centered within its column) */}
+          <aside className="col-span-12 md:col-span-2 flex flex-col items-center text-center">
             <img
               src={avatarDataUrl}
-              alt={User}
-              className="w-36 h-36 rounded-full shadow-lg mb-4 object-cover"
+              alt={username}
+              className="w-32 h-32 rounded-full shadow-lg mb-4 object-cover"
             />
-            {/* display name reads from stored username; editable and linked to input via localStorage */}
-            <div className="text-2xl md:text-3xl font-semibold">
-              <button onClick={handleEditName} className="underline-offset-2 hover:underline">
-                {User || "User"}
-              </button>
-            </div>
-
-            {/* logout button below the username */}
-            <button
-              onClick={logout}
-              className="mt-3 bg-red-500 text-white px-4 py-2 rounded-full shadow-sm hover:opacity-90 text-sm"
-              aria-label="Log out"
-            >
-              Log out
-            </button>
-            {/* uniform, slightly larger info text, centered */}
+            <div className="text-2xl md:text-3xl font-semibold">{username}</div>
             <div className="text-base text-gray-600 mt-4">other info</div>
             <div className="text-base text-gray-600 mt-2">like location</div>
           </aside>
+ 
+           {/* Center / right: main card (content centered inside card) */}
+          <section className="col-span-12 md:col-span-10">
+             <div className="bg-gray-100 rounded-2xl p-6 shadow-md text-center w-full">
+               <h2 className="text-3xl md:text-4xl font-bold mb-3">Current Barangay Focus</h2>
 
-          {/* Center / right: main card */}
-          <section className="col-span-12 md:col-span-9">
-            <div className="bg-gray-100 rounded-2xl p-6 shadow-md text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-3">Current Barangay Focus</h2>
+               <div className="mb-2">
+                 <a
+                   href="#"
+                   className="text-blue-600 inline-flex items-center text-lg font-medium underline"
+                   onClick={(e) => e.preventDefault()}
+                 >
+                   ↗&nbsp; Baranggay Name
+                 </a>
+               </div>
 
-              <div className="mb-2">
-                <a
-                  href="#"
-                  className="text-blue-600 inline-flex items-center text-lg font-medium underline"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  ↗&nbsp; Baranggay Name
-                </a>
-              </div>
+               <div className="text-base text-gray-600">location</div>
+               <div className="text-base text-gray-600 mb-4">residents num</div>
 
-              <div className="text-base text-gray-600">location</div>
-              <div className="text-base text-gray-600 mb-4">residents num</div>
+               <div className="mt-4">
+                 <div className="bg-white rounded-2xl border-4 border-blue-300 p-6 h-64 shadow-inner">
+                   <h3 className="text-2xl font-semibold mb-3">Checklist</h3>
+                   <div className="text-base text-gray-600">{/* checklist items go here */}</div>
+                 </div>
+               </div>
+             </div>
 
-              <div className="mt-4">
-                <div className="bg-white rounded-2xl border-4 border-blue-300 p-6 h-64 shadow-inner">
-                  <h3 className="text-2xl font-semibold mb-3">Checklist</h3>
-                  <div className="text-base text-gray-600">{/* checklist items go here */}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* bottom action (align to the right) */}
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={goBack}
-                className="bg-blue-400 text-white px-6 py-2 rounded-full shadow-sm hover:opacity-95"
-              >
-                go back
-              </button>
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
-  );
+             {/* bottom action (align to the right) */}
+             <div className="flex justify-end mt-6">
+               <button
+                 onClick={goBack}
+                 className="bg-blue-400 text-white px-6 py-2 rounded-full shadow-sm hover:opacity-95"
+               >
+                 go back
+               </button>
+             </div>
+           </section>
+         </div>
+       </main>
+     </div>
+   );
 };
 
 export default Account;

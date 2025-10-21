@@ -57,6 +57,13 @@ export const SignUpOverlay = ({
         throw new Error(data.message || "Signup failed");
       }
 
+      // persist the username so Account page can use it as the display name
+      try {
+        localStorage.setItem("username", username);
+      } catch (e) {
+        /* ignore localStorage errors */
+      }
+
       setLocation("/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
