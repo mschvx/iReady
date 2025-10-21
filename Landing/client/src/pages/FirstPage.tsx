@@ -1,17 +1,26 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PhilippinesMap } from "@/components/PhilippinesMap";
-import { useLocation } from "wouter";
+import { LogInOverlay } from "./LogInOverlay";
+import { SignUpOverlay } from "./SignUpOverlay";
 
 export const FirstPage = (): JSX.Element => {
-  const [, setLocation] = useLocation();
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+
   const handleAboutClick = () => {
-    const aboutSection = document.getElementById('about-section');
-    aboutSection?.scrollIntoView({ behavior: 'smooth' });
+    const aboutSection = document.getElementById("about-section");
+    aboutSection?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleLoginClick = () => {
-    setLocation('/login');
+    console.log("handleLoginClick: opening login overlay");
+    setShowLogin(true);
+  };
+
+  const handleSignupClick = () => {
+    console.log("handleSignupClick: opening signup overlay");
+    setShowSignup(true);
   };
 
   return (
@@ -27,13 +36,13 @@ export const FirstPage = (): JSX.Element => {
 
       {/* Navigation Overlay */}
       <nav className="fixed top-0 right-0 z-[2100] flex gap-3 md:gap-4 pr-4 md:pr-8 pt-3 md:pt-4 lg:pt-6">
-        <Button 
+        <Button
           onClick={handleAboutClick}
           className="h-10 md:h-12 px-4 md:px-6 bg-gray-700 rounded-full hover:bg-gray-600 text-sm md:text-base"
         >
           About
         </Button>
-        <Button 
+        <Button
           onClick={handleLoginClick}
           className="h-10 md:h-12 px-4 md:px-6 bg-blue-600 rounded-full hover:bg-blue-700 text-sm md:text-base"
         >
@@ -60,7 +69,7 @@ export const FirstPage = (): JSX.Element => {
               <p className="text-sm md:text-base text-gray-700 mb-6">
                 Collaborate with other units as you all aim to reach a common goal, help those in need.
               </p>
-              <Button 
+              <Button
                 onClick={handleLoginClick}
                 className="w-full h-12 bg-gray-900 rounded-lg hover:bg-gray-800 text-sm md:text-base font-semibold"
               >
@@ -78,8 +87,8 @@ export const FirstPage = (): JSX.Element => {
         </section>
 
         {/* Info About iReady Section */}
-        <section 
-          id="about-section" 
+        <section
+          id="about-section"
           className="bg-black text-white py-16 md:py-24 px-6 md:px-16"
         >
           <div className="max-w-6xl">
@@ -176,6 +185,27 @@ export const FirstPage = (): JSX.Element => {
           </div>
         </section>
       </main>
+
+      {/* Overlays */}
+      {showLogin && (
+        <LogInOverlay
+          onClose={() => setShowLogin(false)}
+          onOpenSignUp={() => {
+            setShowLogin(false);
+            setShowSignup(true);
+          }}
+        />
+      )}
+
+      {showSignup && (
+        <SignUpOverlay
+          onClose={() => setShowSignup(false)}
+          onOpenLogin={() => {
+            setShowSignup(false);
+            setShowLogin(true);
+          }}
+        />
+      )}
     </div>
   );
 };
