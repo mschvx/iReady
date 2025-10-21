@@ -9,8 +9,8 @@ interface User {
 
 export const Account = (): JSX.Element => {
   const [, setLocation] = useLocation();
-  const goHome = () => setLocation("/");
-  const goBack = () => setLocation("/");
+  const goHome = () => setLocation("/home");
+  const goBack = () => setLocation("/home");
 
   // single source-of-truth for the user's name: "User"
   // read from localStorage (or your auth store). Falls back to placeholder.
