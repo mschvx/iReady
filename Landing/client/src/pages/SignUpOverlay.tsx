@@ -86,7 +86,7 @@ export const SignUpOverlay = ({
           onSubmit={handleSubmit}
           className="flex flex-col items-center justify-center gap-3 w-full max-w-[420px] mx-auto text-center"
         >
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[40px] leading-tight mb-1">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 text-black">
             SIGN UP
           </h1>
 
@@ -145,7 +145,7 @@ export const SignUpOverlay = ({
                   setLocation("/login");
                 }
               }}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer "
             >
               Have an account? Log In Instead
             </button>
