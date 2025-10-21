@@ -79,11 +79,11 @@ export const SignUpOverlay = ({
 
       {/* centered white panel */}
       <div
-        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-md"
+        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-2xl ring-1 ring-black/5 transform-gpu transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 w-full text-center">
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[48px] leading-none">
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[44px] leading-none mb-3">
             SIGN UP
           </h1>
 
@@ -125,14 +125,14 @@ export const SignUpOverlay = ({
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-2 hover:bg-[#c9c9c9]/95"
+            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
           >
-            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px]">
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px] tracking-tight">
               {isLoading ? "CREATING..." : "SUBMIT"}
             </span>
           </Button>
 
-          <div className="flex flex-col items-center gap-2 mt-3">
+          <div className="flex flex-col items-center gap-3 mt-4">
             <button
               type="button"
               onClick={() => {

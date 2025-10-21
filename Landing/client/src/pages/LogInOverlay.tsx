@@ -68,11 +68,11 @@ export const LogInOverlay = ({
 
       {/* centered panel; stop clicks from reaching backdrop */}
       <div
-        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-md"
+        className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-2xl ring-1 ring-black/5 transform-gpu transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6 w-full text-center">
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[48px] leading-none">
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 w-full text-center">
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[44px] leading-none mb-2">
             LOG IN
           </h1>
 
@@ -105,14 +105,17 @@ export const LogInOverlay = ({
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-2 hover:bg-[#c9c9c9]/95"
+            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
+            /* subtle lift on hover */
+            onMouseEnter={(e) => (e.currentTarget.parentElement!.parentElement!.classList.add("translate-y-0.5"))}
+            onMouseLeave={(e) => (e.currentTarget.parentElement!.parentElement!.classList.remove("translate-y-0.5"))}
           >
-            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px]">
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px] tracking-tight">
               {isLoading ? "LOADING..." : "SUBMIT"}
             </span>
           </Button>
 
-          <div className="flex flex-col items-center gap-2 mt-4">
+          <div className="flex flex-col items-center gap-3 mt-6">
             <button
               type="button"
               onClick={() => {
