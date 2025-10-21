@@ -27,13 +27,15 @@ export const FirstPage = (): JSX.Element => {
 
   return (
     <div className="bg-white w-full min-h-screen">
-      {/* Fixed Header with iReady Logo */}
-      <header className="fixed top-0 left-0 w-full h-16 md:h-20 lg:h-24 z-[4000] bg-white shadow-sm">
-        <img
-          className="w-full h-full object-cover"
-          alt="iReady Header"
-          src="/figmaAssets/fixed.png"
-        />
+      {/* Fixed Header with iReady Logo (smaller, vertically centered on the left) */}
+      <header className="fixed top-0 left-0 w-full h-10 md:h-20 lg:h-24 z-[4000] bg-black shadow-none border-b-0 flex items-center">
+        <div className="pl-4 md:pl-6 lg:pl-8">
+          <img
+            className="h-18 md:h-20 lg:h-22 w-auto block"
+            alt="iReady Header"
+            src="/figmaAssets/fixed.png"
+          />
+        </div>
       </header>
 
       {/* Navigation Overlay (keep above overlays too) */}
