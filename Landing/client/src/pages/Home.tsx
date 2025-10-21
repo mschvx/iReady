@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
-// Navotas bounding box (approx): lat 14.65 to 14.72, lon 120.90 to 121.00
+import React, { useEffect, useState, useRef } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup as LeafletPopup, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+// Navotas bounding box (approx) — updated to match local POIs in server/data/navotas_pois.json
 const NAVOTAS_BOUNDS = {
-  minLat: 14.65,
-  maxLat: 14.72,
-  minLon: 120.90,
-  maxLon: 121.00,
+  // loosely around the navotas POIs
+  minLat: 14.42,
+  maxLat: 14.45,
+  minLon: 120.92,
+  maxLon: 120.944,
 };
 
 type BarangayCenter = {
@@ -32,12 +35,14 @@ const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_,
     Math.random() * (NAVOTAS_BOUNDS.maxLon - NAVOTAS_BOUNDS.minLon),
 }));
 
-// Tighter land-only bounds inside Navotas to reduce chance of water placement
+// Tighter land-only bounds inside Navotas to reduce chance of water placement.
+// We base this on the POIs file ranges and keep it slightly inset from the extreme
+// POI coordinates so randomly generated points land on built-up/land areas.
 const NAVOTAS_LAND_BOUNDS = {
-  minLat: 14.655,
-  maxLat: 14.695,
-  minLon: 120.94,
-  maxLon: 120.99,
+  minLat: 14.427,
+  maxLat: 14.444,
+  minLon: 120.923,
+  maxLon: 120.94,
 };
 
 function getLatLonForCode(code: string): { lat: number; lon: number } {
@@ -80,14 +85,34 @@ export const Home = (): JSX.Element => {
   const [areaCodes, setAreaCodes] = useState<string[]>([]);
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
   const [poiCenters, setPoiCenters] = useState<NavotasPOI[]>([]);
-  // derive centers from areaCodes (first 50) or fallback
+  const [displayCenters, setDisplayCenters] = useState<BarangayCenter[]>([]);
+  // mapRef removed: we use a small MapViewUpdater component to control view
+
+  function MapViewUpdater({ center }: { center: { lat: number; lon: number } }) {
+    const map = useMap();
+    useEffect(() => {
+      if (!map) return;
+      try {
+        map.setView([center.lat, center.lon], map.getZoom());
+      } catch (err) {
+        // ignore
+      }
+    }, [center.lat, center.lon, map]);
+    return null;
+  }
+  // derive centers from areaCodes (first 50) or fallback; actual display centers are
+  // generated from nearby POIs to ensure points fall on land (we jitter around
+  // non-water POIs). displayCenters is computed in an effect below.
   const barangayCenters: BarangayCenter[] = (areaCodes && areaCodes.length > 0)
     ? areaCodes.slice(0, 50).map((c) => {
         const { lat, lon } = getLatLonForCode(c);
         return { adm4_pcode: c, lat, lon };
       })
     : fallbackBarangayCenters;
-  const [mapCenter, setMapCenter] = useState({ lat: 14.6094, lon: 120.9942 });
+  // default map center set to Navotas area center so our 50 points are visible on load
+  const defaultCenterLat = (NAVOTAS_LAND_BOUNDS.minLat + NAVOTAS_LAND_BOUNDS.maxLat) / 2;
+  const defaultCenterLon = (NAVOTAS_LAND_BOUNDS.minLon + NAVOTAS_LAND_BOUNDS.maxLon) / 2;
+  const [mapCenter, setMapCenter] = useState({ lat: defaultCenterLat, lon: defaultCenterLon });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; lat: number; lon: number }>>([]);
@@ -113,7 +138,9 @@ export const Home = (): JSX.Element => {
       }
     })();
 
-    // fetch all Navotas POIs (used to place accurate markers)
+    // fetch all Navotas POIs (used to place accurate markers). We'll use these
+    // POIs as anchors to scatter our 50 circles on land (we filter out POIs that
+    // look like water to avoid placing circles in the bay/sea).
     (async () => {
       try {
         const resp = await fetch('/api/pois?all=true');
@@ -131,6 +158,56 @@ export const Home = (): JSX.Element => {
       }
     })();
   }, []);
+
+  // Compute 50 display centers anchored on land POIs or fall back to deterministic
+  // pseudo-random locations derived from ADM4 codes. We jitter near POIs so
+  // the points are guaranteed to be close to known land locations.
+  useEffect(() => {
+    const count = 50;
+    const centers: BarangayCenter[] = [];
+    const rng = (seed: string) => {
+      // simple deterministic PRNG based on code string
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < seed.length; i++) {
+        h ^= seed.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+      }
+      return () => {
+        h = Math.imul(h ^ (h >>> 16), 2246822507) >>> 0;
+        h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0;
+        const res = (h >>> 0) / 4294967295;
+        return res;
+      };
+    };
+
+    // choose a deterministic or random poi index for each code
+    for (let i = 0; i < count; i++) {
+      const code = (areaCodes && areaCodes.length > 0) ? areaCodes[i % areaCodes.length] : `PH-FAKE-${i + 1}`;
+      let lat = 0;
+      let lon = 0;
+
+      if (poiCenters && poiCenters.length > 0) {
+        // pick a poi deterministically so rerenders are stable
+        const pick = (i * 7) % poiCenters.length;
+        const base = poiCenters[pick];
+        const prng = rng(code + String(i));
+        // jitter +/- ~0.0015 degrees (~100-150m) around POI
+        const jitterLat = (prng() - 0.5) * 0.003;
+        const jitterLon = (prng() - 0.5) * 0.003;
+        lat = base.lat + jitterLat;
+        lon = base.lon + jitterLon;
+      } else {
+        // fallback deterministic mapping inside NAVOTAS_LAND_BOUNDS
+        const { lat: gLat, lon: gLon } = getLatLonForCode(code);
+        lat = gLat;
+        lon = gLon;
+      }
+
+      centers.push({ adm4_pcode: code, lat, lon });
+    }
+
+    setDisplayCenters(centers);
+  }, [areaCodes, poiCenters]);
 
   const checkAuth = async () => {
     try {
@@ -161,6 +238,14 @@ export const Home = (): JSX.Element => {
           const firstBarangay = data[0];
           setSelectedBarangay(firstBarangay.adm4_pcode);
           categorizeSupplies(firstBarangay);
+          // Use the adm4_pcode values from ToReceive.json as our area codes so
+          // the map markers show real barangay codes instead of PH-FAKE.
+          try {
+            const codes = data.map((d) => d.adm4_pcode).filter(Boolean) as string[];
+            if (codes.length > 0) setAreaCodes(codes);
+          } catch (err) {
+            // ignore malformed data
+          }
         }
       } else {
         console.error("Failed to fetch supplies:", response.status);
@@ -350,49 +435,31 @@ export const Home = (): JSX.Element => {
       <div className="flex h-full pt-[103px]">
         {/* Map Section */}
         <div className="relative bg-[#d9d9d9] border border-solid border-black w-[940px] h-[calc(100vh-103px)] flex items-center justify-center">
-          <iframe
-            key={`${mapCenter.lat}-${mapCenter.lon}`}
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lon - 0.01}%2C${mapCenter.lat - 0.01}%2C${mapCenter.lon + 0.01}%2C${mapCenter.lat + 0.01}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lon}`}
-            width="100%"
-            height="100%"
-            style={{ border: 0, position: 'absolute', left: 0, top: 0, zIndex: 0 }}
-            title="Philippines Map"
-          />
-          {/* Overlay barangay centers as blue dots */}
-          <div
-            className="absolute inset-0"
-            style={{ pointerEvents: 'none', zIndex: 2 }}
+          <MapContainer
+            center={[mapCenter.lat, mapCenter.lon]}
+            zoom={15}
+            scrollWheelZoom={true}
+            style={{ height: '100%', width: '100%', minHeight: '400px' }}
           >
-            {(poiCenters.length > 0 ? poiCenters : barangayCenters).map((b: any, idx: number) => {
-              const lat = (b.lat as number) || 0;
-              const lon = (b.lon as number) || 0;
-              // Convert lat/lon to x/y relative to the map bounding box
-              const x = ((lon - (mapCenter.lon - 0.01)) / 0.02) * 100;
-              const y = (1 - (lat - (mapCenter.lat - 0.01)) / 0.02) * 100;
-              // Only render if within bounds
-              if (x < 0 || x > 100 || y < 0 || y > 100) return null;
-              const title = b.name || b.adm4_pcode || `poi-${idx}`;
-              return (
-                <div
-                  key={b.id || b.adm4_pcode || idx}
-                  style={{
-                    position: "absolute",
-                    left: `${x}%`,
-                    top: `${y}%`,
-                    transform: "translate(-50%, -50%)",
-                    width: 20,
-                    height: 20,
-                    background: "#2563eb",
-                    borderRadius: "50%",
-                    border: "2px solid #fff",
-                    boxShadow: "0 0 6px #0004",
-                    zIndex: 3,
-                  }}
-                  title={title}
-                />
-              );
-            })}
-          </div>
+            <MapViewUpdater center={mapCenter} />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {displayCenters.map((b: any, idx: number) => (
+              <CircleMarker
+                key={b.adm4_pcode || idx}
+                center={[b.lat, b.lon]}
+                radius={5}
+                pathOptions={{ color: '#fff', fillColor: '#2563eb', fillOpacity: 0.95, weight: 1 }}
+              >
+                <LeafletPopup>{b.adm4_pcode}</LeafletPopup>
+                <LeafletTooltip direction="top" offset={[0, -6]} permanent className="bg-white text-xs text-black px-1 py-0 rounded shadow-sm">
+                  {b.adm4_pcode}
+                </LeafletTooltip>
+              </CircleMarker>
+            ))}
+          </MapContainer>
           <button className="absolute left-2 bottom-8 bg-[#93c5fd] px-6 py-2 rounded-xl text-white text-lg hover:bg-[#7ab8f7]" style={{ zIndex: 10 }}>
             go back
           </button>
