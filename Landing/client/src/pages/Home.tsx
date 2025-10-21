@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup as LeafletPopup, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Popup as LeafletPopup, Tooltip as LeafletTooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 // Navotas bounding box (approx) — updated to match local POIs in server/data/navotas_pois.json
 const NAVOTAS_BOUNDS = {
@@ -10,11 +10,13 @@ const NAVOTAS_BOUNDS = {
   maxLon: 120.944,
 };
 
+
 type BarangayCenter = {
   adm4_pcode: string;
   lat: number;
   lon: number;
 };
+
 
 type NavotasPOI = {
   id: string;
@@ -23,6 +25,7 @@ type NavotasPOI = {
   lon: number;
   keywords?: string[];
 };
+
 
 // Fallback random centers (used only until we load actual areaCodes)
 const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => ({
@@ -35,6 +38,7 @@ const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_,
     Math.random() * (NAVOTAS_BOUNDS.maxLon - NAVOTAS_BOUNDS.minLon),
 }));
 
+
 // Tighter land-only bounds inside Navotas to reduce chance of water placement.
 // We base this on the POIs file ranges and keep it slightly inset from the extreme
 // POI coordinates so randomly generated points land on built-up/land areas.
@@ -44,6 +48,7 @@ const NAVOTAS_LAND_BOUNDS = {
   minLon: 120.923,
   maxLon: 120.94,
 };
+
 
 function getLatLonForCode(code: string): { lat: number; lon: number } {
   let h = 2166136261 >>> 0;
@@ -60,15 +65,18 @@ function getLatLonForCode(code: string): { lat: number; lon: number } {
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 
+
 interface User {
   id: string;
   username: string;
 }
 
+
 interface SupplyPrediction {
   adm4_pcode: string;
   [key: string]: any;
 }
+
 
 interface CategorySupplies {
   medical: { [key: string]: number };
@@ -76,6 +84,7 @@ interface CategorySupplies {
   shelter: { [key: string]: number };
   water: { [key: string]: number };
 }
+
 
 export const Home = (): JSX.Element => {
   const [, setLocation] = useLocation();
@@ -86,18 +95,41 @@ export const Home = (): JSX.Element => {
   const [areaSuggestions, setAreaSuggestions] = useState<string[]>([]);
   const [poiCenters, setPoiCenters] = useState<NavotasPOI[]>([]);
   const [displayCenters, setDisplayCenters] = useState<BarangayCenter[]>([]);
+  // Layer visibility state for legend toggles
+  const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({});
   // mapRef removed: we use a small MapViewUpdater component to control view
+
 
   function MapViewUpdater({ center }: { center: { lat: number; lon: number } }) {
     const map = useMap();
     useEffect(() => {
       if (!map) return;
       try {
-        map.setView([center.lat, center.lon], map.getZoom());
+        // always use the external mapZoom when animating to a new center
+        map.setView([center.lat, center.lon], mapZoom, { animate: true });
+      } catch {
+        // ignore if map not ready
+      }
+    }, [center.lat, center.lon, mapZoom, map]);
+    return null;
+  }
+
+
+  // Fit the map to the Navotas bounding box once on initial load
+  function FitNavotasBounds() {
+    const map = useMap();
+    const fitted = useRef(false);
+    useEffect(() => {
+      if (fitted.current) return;
+      try {
+        const southWest: [number, number] = [NAVOTAS_BOUNDS.minLat, NAVOTAS_BOUNDS.minLon];
+        const northEast: [number, number] = [NAVOTAS_BOUNDS.maxLat, NAVOTAS_BOUNDS.maxLon];
+        map.fitBounds([southWest, northEast], { animate: false, padding: [20, 20] });
+        fitted.current = true;
       } catch (err) {
         // ignore
       }
-    }, [center.lat, center.lon, map]);
+    }, [map]);
     return null;
   }
   // derive centers from areaCodes (first 50) or fallback; actual display centers are
@@ -113,6 +145,7 @@ export const Home = (): JSX.Element => {
   const defaultCenterLat = (NAVOTAS_LAND_BOUNDS.minLat + NAVOTAS_LAND_BOUNDS.maxLat) / 2;
   const defaultCenterLon = (NAVOTAS_LAND_BOUNDS.minLon + NAVOTAS_LAND_BOUNDS.maxLon) / 2;
   const [mapCenter, setMapCenter] = useState({ lat: defaultCenterLat, lon: defaultCenterLon });
+  const [mapZoom, setMapZoom] = useState<number>(13); // <- new: zoom state
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; lat: number; lon: number }>>([]);
@@ -120,11 +153,20 @@ export const Home = (): JSX.Element => {
   const [adm4Suggestions, setAdm4Suggestions] = useState<Array<any>>([]);
   const [supplies, setSupplies] = useState<CategorySupplies | null>(null);
   const [selectedBarangay, setSelectedBarangay] = useState<string>("");
+  // New state to load and hold prediction data for a searched adm4 code
+  const [toReceiveData, setToReceiveData] = useState<SupplyPrediction[] | null>(null);
+  const [selectedPrediction, setSelectedPrediction] = useState<SupplyPrediction | null>(null);
+  // Legend / layer toggles
+  const [showBarangayPoints, setShowBarangayPoints] = useState<boolean>(true);
+  const [showAreaCircles, setShowAreaCircles] = useState<boolean>(true);
+  const [showPoiLabels, setShowPoiLabels] = useState<boolean>(false);
+
 
   useEffect(() => {
     checkAuth();
     // keep loading supplies predictions (previous behavior)
     loadSupplies();
+
 
     // fetch local toreceive area codes for simple search
     (async () => {
@@ -137,6 +179,7 @@ export const Home = (): JSX.Element => {
         // ignore
       }
     })();
+
 
     // fetch all Navotas POIs (used to place accurate markers). We'll use these
     // POIs as anchors to scatter our 50 circles on land (we filter out POIs that
@@ -152,12 +195,31 @@ export const Home = (): JSX.Element => {
           const kw = p.keywords || [];
           return !kw.some((k: string) => waterKeywords.some(w => k.toLowerCase().includes(w)));
         });
-        setPoiCenters(filtered);
+        // further restrict POIs to the Navotas bounding box to avoid out-of-area data
+        const inNavotas = filtered.filter(p => {
+          return p && typeof p.lat === 'number' && typeof p.lon === 'number' &&
+            p.lat >= NAVOTAS_BOUNDS.minLat && p.lat <= NAVOTAS_BOUNDS.maxLat &&
+            p.lon >= NAVOTAS_BOUNDS.minLon && p.lon <= NAVOTAS_BOUNDS.maxLon;
+        });
+        setPoiCenters(inNavotas.length > 0 ? inNavotas : filtered);
       } catch (err) {
         // ignore
       }
     })();
+
+
+    // initialize visible layer toggles once
+    setVisibleLayers({
+      barangays: true,
+      evacuation: true,
+      hospital: true,
+      school: true,
+      market: true,
+      church: true,
+      other: true,
+    });
   }, []);
+
 
   // Compute 50 display centers anchored on land POIs or fall back to deterministic
   // pseudo-random locations derived from ADM4 codes. We jitter near POIs so
@@ -180,22 +242,27 @@ export const Home = (): JSX.Element => {
       };
     };
 
+
     // choose a deterministic or random poi index for each code
     for (let i = 0; i < count; i++) {
       const code = (areaCodes && areaCodes.length > 0) ? areaCodes[i % areaCodes.length] : `PH-FAKE-${i + 1}`;
       let lat = 0;
       let lon = 0;
 
-      if (poiCenters && poiCenters.length > 0) {
+
+  if (poiCenters && poiCenters.length > 0) {
         // pick a poi deterministically so rerenders are stable
         const pick = (i * 7) % poiCenters.length;
         const base = poiCenters[pick];
         const prng = rng(code + String(i));
-        // jitter +/- ~0.0015 degrees (~100-150m) around POI
-        const jitterLat = (prng() - 0.5) * 0.003;
-        const jitterLon = (prng() - 0.5) * 0.003;
-        lat = base.lat + jitterLat;
-        lon = base.lon + jitterLon;
+  // jitter +/- ~0.0015 degrees (~100-150m) around POI
+  const jitterLat = (prng() - 0.5) * 0.003;
+  const jitterLon = (prng() - 0.5) * 0.003;
+  lat = base.lat + jitterLat;
+  lon = base.lon + jitterLon;
+  // clamp to Navotas land bounds to avoid accidental drift into other provinces
+  lat = Math.max(NAVOTAS_LAND_BOUNDS.minLat, Math.min(NAVOTAS_LAND_BOUNDS.maxLat, lat));
+  lon = Math.max(NAVOTAS_LAND_BOUNDS.minLon, Math.min(NAVOTAS_LAND_BOUNDS.maxLon, lon));
       } else {
         // fallback deterministic mapping inside NAVOTAS_LAND_BOUNDS
         const { lat: gLat, lon: gLon } = getLatLonForCode(code);
@@ -203,11 +270,18 @@ export const Home = (): JSX.Element => {
         lon = gLon;
       }
 
+
+     
+      // ensure generated centers also lie within NAVOTAS_LAND_BOUNDS
+      lat = Math.max(NAVOTAS_LAND_BOUNDS.minLat, Math.min(NAVOTAS_LAND_BOUNDS.maxLat, lat));
+      lon = Math.max(NAVOTAS_LAND_BOUNDS.minLon, Math.min(NAVOTAS_LAND_BOUNDS.maxLon, lon));
       centers.push({ adm4_pcode: code, lat, lon });
     }
 
+
     setDisplayCenters(centers);
   }, [areaCodes, poiCenters]);
+
 
   const checkAuth = async () => {
     try {
@@ -226,6 +300,7 @@ export const Home = (): JSX.Element => {
       setIsLoading(false);
     }
   };
+
 
   const loadSupplies = async () => {
     try {
@@ -255,6 +330,7 @@ export const Home = (): JSX.Element => {
     }
   };
 
+
   const categorizeSupplies = (barangayData: SupplyPrediction) => {
     const categories: CategorySupplies = {
       medical: {},
@@ -263,11 +339,12 @@ export const Home = (): JSX.Element => {
       water: {}
     };
 
+
     Object.keys(barangayData).forEach(key => {
       if (key.startsWith("pred_")) {
         const itemName = key.replace("pred_", "").replace(/_/g, " ");
         const value = barangayData[key];
-        
+       
         // Categorize based on item name (matching RForest_train.py logic)
         if (/para|first|antibi|bandage|alcohol|therm|blood|mask|glove|vitamin/.test(key)) {
           categories.medical[itemName] = value;
@@ -281,8 +358,10 @@ export const Home = (): JSX.Element => {
       }
     });
 
+
     setSupplies(categories);
   };
+
 
   const handleLogout = async () => {
     try {
@@ -296,23 +375,78 @@ export const Home = (): JSX.Element => {
     }
   };
 
+
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    const q = searchQuery.trim();
+    if (!q) return;
+
 
     setIsSearching(true);
     setSearchError("");
+    setSelectedPrediction(null);
+
+
     try {
-      const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(searchQuery)}`
-      );
+      const lc = q.toLowerCase();
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Location not found");
+
+  // 1) If the query is an adm4 code or matches a display center, jump to it
+      const matched = displayCenters.find((d) => (d.adm4_pcode || "").toLowerCase() === lc);
+      if (matched) {
+        setMapCenter({ lat: matched.lat, lon: matched.lon });
+        setMapZoom(18); // zoom in more when focusing a single barangay
+        setSelectedBarangay(matched.adm4_pcode);
+ 
+  // show the formatted prediction summary (if loaded)
+        if (toReceiveData) {
+          const pred = toReceiveData.find((p) => (p.adm4_pcode || "").toLowerCase() === lc);
+          if (pred) {
+            setSelectedPrediction(pred);
+            categorizeSupplies(pred);
+          } else {
+            setSelectedPrediction(null);
+          }
+        }
+ 
+        setIsSearching(false);
+        return;
       }
-
+ 
+      // 2) If it's in areaCodes but not in displayCenters, compute deterministic lat/lon
+      if (areaCodes && areaCodes.some((c) => c.toLowerCase() === lc)) {
+        const { lat, lon } = getLatLonForCode(q);
+        setMapCenter({ lat, lon });
+        setMapZoom(17);
+        setSelectedBarangay(q);
+ 
+        if (toReceiveData) {
+          const pred = toReceiveData.find((p) => (p.adm4_pcode || "").toLowerCase() === lc);
+          if (pred) {
+            setSelectedPrediction(pred);
+            categorizeSupplies(pred);
+          } else {
+            setSelectedPrediction(null);
+          }
+        }
+ 
+        setIsSearching(false);
+        return;
+      }
+ 
+      // 3) Fallback: server geocode for free-text locations
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as any).message || "Location not found");
+      }
       const data = await response.json();
-      setMapCenter({ lat: data.lat, lon: data.lon });
+      if (data && typeof data.lat === "number" && typeof data.lon === "number") {
+        setMapCenter({ lat: data.lat, lon: data.lon });
+        setMapZoom(13);
+        setSelectedPrediction(null);
+      } else {
+        throw new Error("Invalid geocode result");
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Search failed";
       setSearchError(errorMsg);
@@ -321,6 +455,7 @@ export const Home = (): JSX.Element => {
       setIsSearching(false);
     }
   };
+
 
   // Fetch POI suggestions from server
   useEffect(() => {
@@ -332,6 +467,7 @@ export const Home = (): JSX.Element => {
         setShowSuggestions(false);
       return;
     }
+
 
     const handle = setTimeout(async () => {
       try {
@@ -345,6 +481,7 @@ export const Home = (): JSX.Element => {
         console.error("POI suggestion error:", err);
       }
 
+
       try {
         // fetch adm4 matches
         const adm = await fetch(`/api/adm4?q=${encodeURIComponent(searchQuery)}`);
@@ -356,17 +493,21 @@ export const Home = (): JSX.Element => {
         console.error("ADM4 suggestion error:", err);
       }
 
+
       setShowSuggestions(true);
     }, 250); // debounce
 
+
     return () => clearTimeout(handle);
   }, [searchQuery]);
+
 
   const handleSelectSuggestion = (s: { id: string; name: string; lat: number; lon: number }) => {
     setMapCenter({ lat: s.lat, lon: s.lon });
     setSearchQuery(s.name);
     setShowSuggestions(false);
   };
+
 
   const handleSelectAdm4 = async (adm: any) => {
     if (!adm) return;
@@ -378,9 +519,11 @@ export const Home = (): JSX.Element => {
       console.error("Failed to categorize supplies for adm4:", err);
     }
 
+
     // set search text to the adm4 code for clarity
     setSearchQuery(adm.adm4_pcode || "");
     setShowSuggestions(false);
+
 
     // attempt to geocode adm4 code (server will fallback to nominatim)
     try {
@@ -396,11 +539,33 @@ export const Home = (): JSX.Element => {
     }
   };
 
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
+
+
+  // load predictions JSON once (served from server/static)
+  useEffect(() => {
+    (async () => {
+      try {
+        let res = await fetch("/data/ToReceive.json");
+        if (!res.ok) res = await fetch("/ToReceive.json");
+        if (res.ok) {
+          const data = await res.json();
+          setToReceiveData(Array.isArray(data) ? data : []);
+        } else {
+          setToReceiveData([]);
+        }
+      } catch (err) {
+        console.warn("Failed to load ToReceive.json", err);
+        setToReceiveData([]);
+      }
+    })();
+  }, []);
+
 
   if (isLoading) {
     return (
@@ -410,6 +575,7 @@ export const Home = (): JSX.Element => {
     );
   }
 
+
   return (
     <div className="bg-white relative w-full h-screen overflow-hidden">
       {/* Header */}
@@ -417,12 +583,12 @@ export const Home = (): JSX.Element => {
         <div className="flex items-center">
           <h1 className="text-white text-2xl font-bold">READY</h1>
         </div>
-        
+       
         <div className="flex gap-4">
           <button className="bg-[#2563eb] px-6 py-4 rounded-full text-white font-normal hover:bg-[#1d4ed8]">
             HOME
           </button>
-          <button 
+          <button
             onClick={() => setLocation("/account")}
             className="bg-[#2563eb] px-6 py-4 rounded-full text-white font-normal hover:bg-[#1d4ed8]"
           >
@@ -431,22 +597,25 @@ export const Home = (): JSX.Element => {
         </div>
       </div>
 
+
       {/* Main Content */}
       <div className="flex h-full pt-[103px]">
         {/* Map Section */}
         <div className="relative bg-[#d9d9d9] border border-solid border-black w-[940px] h-[calc(100vh-103px)] flex items-center justify-center">
           <MapContainer
             center={[mapCenter.lat, mapCenter.lon]}
-            zoom={15}
-            scrollWheelZoom={true}
-            style={{ height: '100%', width: '100%', minHeight: '400px' }}
-          >
+            zoom={mapZoom}
+             scrollWheelZoom={true}
+             style={{ height: '100%', width: '100%', minHeight: '400px' }}
+           >
             <MapViewUpdater center={mapCenter} />
+            <FitNavotasBounds />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {displayCenters.map((b: any, idx: number) => (
+            {/* barangay points layer (small markers) */}
+            {visibleLayers.barangays && displayCenters.map((b: any, idx: number) => (
               <CircleMarker
                 key={b.adm4_pcode || idx}
                 center={[b.lat, b.lon]}
@@ -459,11 +628,79 @@ export const Home = (): JSX.Element => {
                 </LeafletTooltip>
               </CircleMarker>
             ))}
+              {showBarangayPoints && displayCenters.map((b: any, idx: number) => (
+                <CircleMarker
+                  key={b.adm4_pcode || idx}
+                  center={[b.lat, b.lon]}
+                  radius={5}
+                  pathOptions={{ color: '#fff', fillColor: '#2563eb', fillOpacity: 0.95, weight: 1 }}
+                >
+                  <LeafletPopup>{b.adm4_pcode}</LeafletPopup>
+                  <LeafletTooltip direction="top" offset={[0, -6]} permanent className="bg-white text-xs text-black px-1 py-0 rounded shadow-sm">
+                    {b.adm4_pcode}
+                  </LeafletTooltip>
+                </CircleMarker>
+              ))}
+
+
+              {/* POIs rendered as translucent area circles when enabled */}
+              {showAreaCircles && poiCenters.map((p) => (
+                <Circle
+                  key={p.id}
+                  center={[p.lat, p.lon]}
+                  radius={80} // ~80 meters default area circle
+                  pathOptions={{ color: '#1f2937', fillColor: '#1f2937', fillOpacity: 0.15, weight: 0.8 }}
+                >
+                  {showPoiLabels && (
+                    <LeafletTooltip direction="top" offset={[0, -6]} className="bg-white text-xs text-black px-1 py-0 rounded shadow-sm">
+                      {p.name}
+                    </LeafletTooltip>
+                  )}
+                </Circle>
+              ))}
+
+
+            {/* POI area circles (translucent) */}
+            {poiCenters && poiCenters.length > 0 && (
+              <>
+                {poiCenters.map((p) => {
+                  // simple heuristic category based on keywords/name
+                  const name = (p.name || '').toLowerCase();
+                  let category = 'other';
+                  if (name.includes('evac') || name.includes('evacuation') || name.includes('center')) category = 'evacuation';
+                  else if (name.includes('hosp') || name.includes('clinic') || name.includes('health')) category = 'hospital';
+                  else if (name.includes('school') || name.includes('college')) category = 'school';
+                  else if (name.includes('market') || name.includes('palengke') || name.includes('mall')) category = 'market';
+                  else if (name.includes('church') || name.includes('chapel') || name.includes('mosque') || name.includes('temple')) category = 'church';
+
+
+                  const colorMap: Record<string, string> = {
+                    evacuation: '#f97316', // orange
+                    hospital: '#ef4444', // red
+                    school: '#6366f1', // indigo
+                    market: '#16a34a', // green
+                    church: '#7c3aed', // purple
+                    other: '#6b7280',
+                  };
+
+
+                  if (!visibleLayers[category]) return null;
+
+
+                  return (
+                    <CircleMarker key={p.id} center={[p.lat, p.lon]} radius={25} pathOptions={{ color: colorMap[category], fillColor: colorMap[category], fillOpacity: 0.18, weight: 1 }}>
+                      <LeafletPopup>{p.name}</LeafletPopup>
+                    </CircleMarker>
+                  );
+                })}
+              </>
+            )}
           </MapContainer>
           <button className="absolute left-2 bottom-8 bg-[#93c5fd] px-6 py-2 rounded-xl text-white text-lg hover:bg-[#7ab8f7]" style={{ zIndex: 10 }}>
             go back
           </button>
         </div>
+
 
         {/* Right Sidebar */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
@@ -491,7 +728,7 @@ export const Home = (): JSX.Element => {
                 disabled={isSearching}
                 className="w-full h-[60px] bg-white rounded-[23px] border-0 px-6 text-xl text-center"
               />
-              <button 
+              <button
                 onClick={handleSearch}
                 disabled={isSearching}
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#93c5fd] w-[72px] h-[66px] rounded-xl flex items-center justify-center text-white text-[37.5px] hover:bg-[#7ab8f7] disabled:opacity-50"
@@ -541,42 +778,78 @@ export const Home = (): JSX.Element => {
             )}
           </div>
 
+
           {/* Main Respondent */}
           <p className="font-normal text-[31.041px] text-black tracking-[-0.6208px] mb-4">
             MAIN RESPONDENT
           </p>
-          
+         
           <button className="border-b-[2.369px] border-[#2563eb] pb-1 mb-8 flex items-center gap-4 bg-transparent cursor-pointer">
             <span className="text-[37.9px] text-[#2563eb] tracking-[-0.758px]">
               ↗ NGO/LGU NAME
             </span>
           </button>
 
-          {/* Legends Section */}
+
+          {/* Legends Section (enhanced) */}
           <p className="font-normal text-[45.149px] text-black tracking-[-0.903px] mb-4">
             LEGENDS
           </p>
-          <div className="space-y-2 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-[#d1d1d1] border-[0.556px] border-solid rounded-[35.562px] h-[57.435px]" />
+
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[
+              { key: 'barangays', label: 'Barangay point', color: '#2563eb', desc: 'Predicted barangay centroid' },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setVisibleLayers(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                className={`flex items-center gap-3 p-2 rounded hover:bg-gray-100 text-left ${!visibleLayers[item.key] ? 'opacity-50' : ''}`}
+              >
+                <span className="inline-block w-4 h-4 rounded-full mr-2" style={{ background: item.color, border: '1px solid white' }} />
+                <div>
+                  <div className="font-medium">{item.label}</div>
+                  <div className="text-xs text-gray-600">{item.desc}</div>
+                </div>
+              </button>
             ))}
           </div>
 
-          {/* Analysis Section */}
-          <p className="font-normal text-[45.149px] text-black tracking-[-0.903px] mb-4">
-            ANALYSIS
-          </p>
-          <div className="space-y-2 mb-8">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-[#d1d1d1] border-[0.556px] border-solid rounded-[35.562px] h-[57.435px]" />
-            ))}
-          </div>
+
+          {/* Prediction summary moved above Needs */}
+          {selectedPrediction && (
+            <aside className="mt-2 mb-6 max-w-lg bg-white p-4 rounded-lg shadow-md overflow-auto">
+              <h3 className="text-lg font-semibold mb-2">Prediction — {selectedPrediction.adm4_pcode}</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div className="font-medium">Population (30min)</div><div>{selectedPrediction.pop_30min ?? "N/A"}</div>
+                <div className="font-medium">Wealth (mean)</div><div>{selectedPrediction.wealth_mean ?? "N/A"}</div>
+                <div className="font-medium">Wealth (std)</div><div>{selectedPrediction.wealth_std ?? "N/A"}</div>
+                <div className="font-medium">Access % (30min)</div><div>{selectedPrediction.access_pct_30min ?? "N/A"}</div>
+                <div className="font-medium">Disease risk</div><div>{selectedPrediction.disease_risk ?? "N/A"}</div>
+              </div>
+
+
+              <h4 className="font-semibold mb-2">Top predicted needs</h4>
+              <ul className="list-disc pl-5 text-sm max-h-40 overflow-auto">
+                {Object.entries(selectedPrediction)
+                  .filter(([k]) => k.startsWith("pred_"))
+                  .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
+                  .slice(0, 8)
+                  .map(([k, v]) => (
+                    <li key={k} className="mb-1">
+                      <span className="capitalize">{k.replace("pred_", "").replace(/_/g, " ")}</span>: <span className="font-medium">{v}</span>
+                    </li>
+                  ))}
+              </ul>
+            </aside>
+          )}
+
 
           {/* Needs Section */}
           <p className="font-normal text-[47.908px] text-black tracking-[-0.9582px] mb-4">
             NEEDS
           </p>
-          
+         
           {supplies ? (
             <div className="space-y-6">
               {/* Medical & Health Category */}
@@ -592,6 +865,7 @@ export const Home = (): JSX.Element => {
                 </div>
               </div>
 
+
               {/* Food & Nutrition Category */}
               <div className="mb-6">
                 <h3 className="font-bold text-[32px] text-[#16a34a] mb-3">Food & Nutrition</h3>
@@ -605,6 +879,7 @@ export const Home = (): JSX.Element => {
                 </div>
               </div>
 
+
               {/* Shelter & Personal Relief Category */}
               <div className="mb-6">
                 <h3 className="font-bold text-[32px] text-[#ca8a04] mb-3">Shelter & Personal Relief</h3>
@@ -617,6 +892,7 @@ export const Home = (): JSX.Element => {
                   ))}
                 </div>
               </div>
+
 
               {/* Water & Sanitation Category */}
               <div className="mb-6">
@@ -638,10 +914,37 @@ export const Home = (): JSX.Element => {
               ))}
             </div>
           )}
-          {/* test*/}
 
 
-        
+          {/* Formatted prediction summary (no raw JSON) */}
+          {selectedPrediction && (
+            <aside className="mt-4 max-w-lg bg-white p-4 rounded-lg shadow-md overflow-auto">
+              <h3 className="text-lg font-semibold mb-2">Prediction — {selectedPrediction.adm4_pcode}</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div className="font-medium">Population (30min)</div><div>{selectedPrediction.pop_30min ?? "N/A"}</div>
+                <div className="font-medium">Wealth (mean)</div><div>{selectedPrediction.wealth_mean ?? "N/A"}</div>
+                <div className="font-medium">Wealth (std)</div><div>{selectedPrediction.wealth_std ?? "N/A"}</div>
+                <div className="font-medium">Access % (30min)</div><div>{selectedPrediction.access_pct_30min ?? "N/A"}</div>
+                <div className="font-medium">Disease risk</div><div>{selectedPrediction.disease_risk ?? "N/A"}</div>
+              </div>
+
+
+              <h4 className="font-semibold mb-2">Top predicted needs</h4>
+              <ul className="list-disc pl-5 text-sm max-h-40 overflow-auto">
+                {Object.entries(selectedPrediction)
+                  .filter(([k]) => k.startsWith("pred_"))
+                  .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
+                  .slice(0, 8)
+                  .map(([k, v]) => (
+                    <li key={k} className="mb-1">
+                      <span className="capitalize">{k.replace("pred_", "").replace(/_/g, " ")}</span>: <span className="font-medium">{v}</span>
+                    </li>
+                  ))}
+              </ul>
+            </aside>
+          )}
+
+
         </div>
       </div>
     </div>
