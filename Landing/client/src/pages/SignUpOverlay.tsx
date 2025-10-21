@@ -55,6 +55,15 @@ export const SignUpOverlay = (): JSX.Element => {
   };
 
   return (
+  <div className="bg-white w-full min-h-screen">
+    {/* Fixed Header with iReady Logo */}
+    <header className="fixed top-0 left-0 w-full h-16 md:h-20 lg:h-24 z-[2000] bg-white shadow-sm">
+        <img
+          className="w-full h-full object-cover"
+          alt="iReady Header"
+          src="/figmaAssets/fixed.png"
+        />
+    </header>
     <div className="bg-white border border-solid border-black w-full min-w-[1198px] min-h-[852px] flex items-center justify-center">
       <form onSubmit={handleSubmit} className="flex flex-col items-center gap-8 w-full max-w-[797px] px-8">
         <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[72.6px] tracking-[0] leading-[normal] whitespace-nowrap">
@@ -123,5 +132,6 @@ export const SignUpOverlay = (): JSX.Element => {
         </button>
       </form>
     </div>
+  </div>
   );
 };

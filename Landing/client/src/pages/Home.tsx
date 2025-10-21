@@ -7,6 +7,18 @@ interface User {
   username: string;
 }
 
+interface SupplyPrediction {
+  adm4_pcode: string;
+  [key: string]: any;
+}
+
+interface CategorySupplies {
+  medical: { [key: string]: number };
+  food: { [key: string]: number };
+  shelter: { [key: string]: number };
+  water: { [key: string]: number };
+}
+
 export const Home = (): JSX.Element => {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<User | null>(null);
@@ -15,9 +27,15 @@ export const Home = (): JSX.Element => {
   const [mapCenter, setMapCenter] = useState({ lat: 14.6094, lon: 120.9942 });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; lat: number; lon: number }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [adm4Suggestions, setAdm4Suggestions] = useState<Array<any>>([]);
+  const [supplies, setSupplies] = useState<CategorySupplies | null>(null);
+  const [selectedBarangay, setSelectedBarangay] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
+    loadSupplies();
   }, []);
 
   const checkAuth = async () => {
@@ -36,6 +54,55 @@ export const Home = (): JSX.Element => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadSupplies = async () => {
+    try {
+      const response = await fetch("/ToReceive.json");
+      if (response.ok) {
+        const data: SupplyPrediction[] = await response.json();
+        console.log("Loaded supplies data:", data.length, "barangays");
+        // Get first barangay's data or allow selection
+        if (data.length > 0) {
+          const firstBarangay = data[0];
+          setSelectedBarangay(firstBarangay.adm4_pcode);
+          categorizeSupplies(firstBarangay);
+        }
+      } else {
+        console.error("Failed to fetch supplies:", response.status);
+      }
+    } catch (err) {
+      console.error("Failed to load supplies:", err);
+    }
+  };
+
+  const categorizeSupplies = (barangayData: SupplyPrediction) => {
+    const categories: CategorySupplies = {
+      medical: {},
+      food: {},
+      shelter: {},
+      water: {}
+    };
+
+    Object.keys(barangayData).forEach(key => {
+      if (key.startsWith("pred_")) {
+        const itemName = key.replace("pred_", "").replace(/_/g, " ");
+        const value = barangayData[key];
+        
+        // Categorize based on item name (matching RForest_train.py logic)
+        if (/para|first|antibi|bandage|alcohol|therm|blood|mask|glove|vitamin/.test(key)) {
+          categories.medical[itemName] = value;
+        } else if (/rice|canned|noodle|biscuit|baby|oil|sugar|salt|juice|meal/.test(key)) {
+          categories.food[itemName] = value;
+        } else if (/blanket|mat|tent|pillow|cloth|towel|slipper|hygiene|net|flash/.test(key)) {
+          categories.shelter[itemName] = value;
+        } else if (key.startsWith("pred_")) {
+          categories.water[itemName] = value;
+        }
+      }
+    });
+
+    setSupplies(categories);
   };
 
   const handleLogout = async () => {
@@ -73,6 +140,78 @@ export const Home = (): JSX.Element => {
       console.error("Search failed:", err);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  // Fetch POI suggestions from server
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
+      setAdm4Suggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const handle = setTimeout(async () => {
+      try {
+        // fetch POI suggestions
+        const resp = await fetch(`/api/pois?q=${encodeURIComponent(searchQuery)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setSuggestions(data.results || []);
+        }
+      } catch (err) {
+        console.error("POI suggestion error:", err);
+      }
+
+      try {
+        // fetch adm4 matches
+        const adm = await fetch(`/api/adm4?q=${encodeURIComponent(searchQuery)}`);
+        if (adm.ok) {
+          const admData = await adm.json();
+          setAdm4Suggestions(admData.results || []);
+        }
+      } catch (err) {
+        console.error("ADM4 suggestion error:", err);
+      }
+
+      setShowSuggestions(true);
+    }, 250); // debounce
+
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = (s: { id: string; name: string; lat: number; lon: number }) => {
+    setMapCenter({ lat: s.lat, lon: s.lon });
+    setSearchQuery(s.name);
+    setShowSuggestions(false);
+  };
+
+  const handleSelectAdm4 = async (adm: any) => {
+    if (!adm) return;
+    // set selected barangay and supplies
+    setSelectedBarangay(adm.adm4_pcode || "");
+    try {
+      categorizeSupplies(adm);
+    } catch (err) {
+      console.error("Failed to categorize supplies for adm4:", err);
+    }
+
+    // set search text to the adm4 code for clarity
+    setSearchQuery(adm.adm4_pcode || "");
+    setShowSuggestions(false);
+
+    // attempt to geocode adm4 code (server will fallback to nominatim)
+    try {
+      const resp = await fetch(`/api/geocode?q=${encodeURIComponent(adm.adm4_pcode)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.lat && data.lon) {
+          setMapCenter({ lat: data.lat, lon: data.lon });
+        }
+      }
+    } catch (err) {
+      console.error("Geocode adm4 failed:", err);
     }
   };
 
@@ -154,6 +293,26 @@ export const Home = (): JSX.Element => {
                 {isSearching ? "..." : "→"}
               </button>
             </div>
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute mt-2 w-[calc(100%-64px)] max-h-52 overflow-y-auto bg-white border border-gray-200 rounded-lg z-50 shadow-lg">
+                {suggestions.map((s) => (
+                  <div key={s.id} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSelectSuggestion(s)}>
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-sm text-gray-500">{s.lat.toFixed(5)}, {s.lon.toFixed(5)}</div>
+                  </div>
+                ))}
+                {adm4Suggestions.length > 0 && (
+                  <div className="border-t border-gray-100">
+                    {adm4Suggestions.map((a) => (
+                      <div key={a.adm4_pcode} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSelectAdm4(a)}>
+                        <div className="font-medium">{a.adm4_pcode}</div>
+                        <div className="text-sm text-gray-500">Population: {a.pop_30min ?? 'N/A'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {searchError && (
               <p className="text-red-600 text-sm mt-2 px-4">{searchError}</p>
             )}
@@ -194,11 +353,72 @@ export const Home = (): JSX.Element => {
           <p className="font-normal text-[47.908px] text-black tracking-[-0.9582px] mb-4">
             NEEDS
           </p>
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-              <div key={i} className="bg-[#d1d1d1] border-[0.588px] border-solid rounded-[37.607px] h-[60.737px]" />
-            ))}
-          </div>
+          
+          {supplies ? (
+            <div className="space-y-6">
+              {/* Medical & Health Category */}
+              <div className="mb-6">
+                <h3 className="font-bold text-[32px] text-[#2563eb] mb-3">Medical & Health</h3>
+                <div className="space-y-2">
+                  {Object.entries(supplies.medical).map(([item, quantity]) => (
+                    <div key={item} className="bg-[#e3f2fd] border-[0.588px] border-solid border-[#2563eb] rounded-[37.607px] h-[60.737px] flex items-center justify-between px-6">
+                      <span className="text-[20px] capitalize">{item}</span>
+                      <span className="text-[24px] font-bold text-[#2563eb]">{quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Food & Nutrition Category */}
+              <div className="mb-6">
+                <h3 className="font-bold text-[32px] text-[#16a34a] mb-3">Food & Nutrition</h3>
+                <div className="space-y-2">
+                  {Object.entries(supplies.food).map(([item, quantity]) => (
+                    <div key={item} className="bg-[#f0fdf4] border-[0.588px] border-solid border-[#16a34a] rounded-[37.607px] h-[60.737px] flex items-center justify-between px-6">
+                      <span className="text-[20px] capitalize">{item}</span>
+                      <span className="text-[24px] font-bold text-[#16a34a]">{quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shelter & Personal Relief Category */}
+              <div className="mb-6">
+                <h3 className="font-bold text-[32px] text-[#ca8a04] mb-3">Shelter & Personal Relief</h3>
+                <div className="space-y-2">
+                  {Object.entries(supplies.shelter).map(([item, quantity]) => (
+                    <div key={item} className="bg-[#fefce8] border-[0.588px] border-solid border-[#ca8a04] rounded-[37.607px] h-[60.737px] flex items-center justify-between px-6">
+                      <span className="text-[20px] capitalize">{item}</span>
+                      <span className="text-[24px] font-bold text-[#ca8a04]">{quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Water & Sanitation Category */}
+              <div className="mb-6">
+                <h3 className="font-bold text-[32px] text-[#0891b2] mb-3">Water & Sanitation</h3>
+                <div className="space-y-2">
+                  {Object.entries(supplies.water).map(([item, quantity]) => (
+                    <div key={item} className="bg-[#ecfeff] border-[0.588px] border-solid border-[#0891b2] rounded-[37.607px] h-[60.737px] flex items-center justify-between px-6">
+                      <span className="text-[20px] capitalize">{item}</span>
+                      <span className="text-[24px] font-bold text-[#0891b2]">{quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                <div key={i} className="bg-[#d1d1d1] border-[0.588px] border-solid rounded-[37.607px] h-[60.737px]" />
+              ))}
+            </div>
+          )}
+          {/* test*/}
+
+
+        
         </div>
       </div>
     </div>

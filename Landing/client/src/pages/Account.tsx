@@ -54,6 +54,7 @@ export const Account = (): JSX.Element => {
   }
 
   return (
+
     <div className="bg-white relative w-full h-screen overflow-hidden">
       {/* Header */}
       <div className="absolute bg-[#110000] h-[103px] left-0 top-0 w-full z-10 flex items-center justify-between px-4">
@@ -80,6 +81,18 @@ export const Account = (): JSX.Element => {
           <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[92.6px] tracking-[0] leading-[normal] text-center">
             ACCOUNT
           </h1>
+          
+          {/* Profile Picture */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <span className="text-white text-5xl font-bold">
+                {user?.username?.charAt(0).toUpperCase() || "U"}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 hover:text-blue-600 cursor-pointer transition-colors">
+              Change profile picture
+            </p>
+          </div>
           
           <p className="text-4xl text-black">
             Username: <span className="font-bold">{user?.username}</span>

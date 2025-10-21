@@ -2,6 +2,7 @@
 # RANDOM FOREST TRAINING ALGORITHM
 # ===========================================
 import os
+import jobplot
 from pathlib import Path
 import numpy as np
 import pandas as pd
