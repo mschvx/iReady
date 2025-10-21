@@ -62,9 +62,9 @@ export const FirstPage = (): JSX.Element => {
         }`}
       >
         {/* Hero Section: Map + Info Panel */}
-        <section className="flex flex-col lg:flex-row min-h-[500px] md:min-h-[600px]">
+        <section className="flex flex-col lg:flex-row min-h-[500px] md:min-h-[630px] flex flex-col justify-center text-center">
           {/* Map Container - Takes up ~70% width on large screens, full width on mobile */}
-          <div className="w-full lg:w-[70%] h-[400px] md:h-[500px] lg:h-[600px] relative z-0">
+          <div className="w-full lg:w-[70%] h-[400px] md:h-[500px] lg:h-[630px] relative z-0">
             <PhilippinesMap className="w-full h-full" />
           </div>
 
@@ -72,7 +72,7 @@ export const FirstPage = (): JSX.Element => {
           <div className="w-full lg:w-[30%] flex flex-col gap-4 p-4 md:p-6 bg-gray-50">
             {/* Call to Action Card */}
             <div className="bg-gray-200 rounded-2xl p-6 md:p-8">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
+              <h2 className="text-2xl md:text-4xl font-bold mb-4">
                 Let's Prepare Now!
               </h2>
               <p className="text-sm md:text-base text-gray-700 mb-6">
@@ -89,7 +89,7 @@ export const FirstPage = (): JSX.Element => {
             {/* Current Updates Card */}
             <div className="bg-gray-200 rounded-2xl p-6 md:p-8">
               <h3 className="text-lg md:text-xl font-bold">
-                Current updates on that map/baranggay
+                LIVE UPDATES
               </h3>
             </div>
           </div>
