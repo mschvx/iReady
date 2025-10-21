@@ -70,6 +70,8 @@ export const Home = (): JSX.Element => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [areaCodes, setAreaCodes] = useState<string[]>([]);
+  // local simple string matches from areaCodes (used for quick substring suggestions)
+  const [localMatches, setLocalMatches] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   // derive centers from areaCodes (first 50) or fallback
   const barangayCenters: BarangayCenter[] = (areaCodes && areaCodes.length > 0)
@@ -81,7 +83,8 @@ export const Home = (): JSX.Element => {
   const [mapCenter, setMapCenter] = useState({ lat: 14.6094, lon: 120.9942 });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string; lat: number; lon: number }>>([]);
+  // POI suggestions returned from server
+  const [poiSuggestions, setPoiSuggestions] = useState<Array<{ id: string; name: string; lat: number; lon: number }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [adm4Suggestions, setAdm4Suggestions] = useState<Array<any>>([]);
   const [supplies, setSupplies] = useState<CategorySupplies | null>(null);
@@ -210,7 +213,7 @@ export const Home = (): JSX.Element => {
   // Fetch POI suggestions from server
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setSuggestions([]);
+      setPoiSuggestions([]);
       setAdm4Suggestions([]);
       setShowSuggestions(false);
       return;
@@ -222,7 +225,7 @@ export const Home = (): JSX.Element => {
         const resp = await fetch(`/api/pois?q=${encodeURIComponent(searchQuery)}`);
         if (resp.ok) {
           const data = await resp.json();
-          setSuggestions(data.results || []);
+          setPoiSuggestions(data.results || []);
         }
       } catch (err) {
         console.error("POI suggestion error:", err);
@@ -378,10 +381,10 @@ export const Home = (): JSX.Element => {
                   // update suggestions from areaCodes (simple substring match)
                   const q = v.trim().toLowerCase();
                   if (!q) {
-                    setSuggestions([]);
+                    setLocalMatches([]);
                   } else {
                     const matches = areaCodes.filter((c) => c.toLowerCase().includes(q)).slice(0, 10);
-                    setSuggestions(matches);
+                    setLocalMatches(matches);
                   }
                   setSearchError("");
                 }}
@@ -397,38 +400,38 @@ export const Home = (): JSX.Element => {
                 {isSearching ? "..." : "→"}
               </button>
             </div>
-            {showSuggestions && suggestions.length > 0 && (
+            {showSuggestions && poiSuggestions.length > 0 && (
               <div className="absolute mt-2 w-[calc(100%-64px)] max-h-52 overflow-y-auto bg-white border border-gray-200 rounded-lg z-50 shadow-lg">
-                {suggestions.map((s) => (
+                {poiSuggestions.map((s) => (
                   <div key={s.id} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSelectSuggestion(s)}>
                     <div className="font-medium">{s.name}</div>
                     <div className="text-sm text-gray-500">{s.lat.toFixed(5)}, {s.lon.toFixed(5)}</div>
                   </div>
                 ))}
-                {adm4Suggestions.length > 0 && (
-                  <div className="border-t border-gray-100">
-                    {adm4Suggestions.map((a) => (
-                      <div key={a.adm4_pcode} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSelectAdm4(a)}>
-                        <div className="font-medium">{a.adm4_pcode}</div>
-                        <div className="text-sm text-gray-500">Population: {a.pop_30min ?? 'N/A'}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                 {adm4Suggestions.length > 0 && (
+                   <div className="border-t border-gray-100">
+                     {adm4Suggestions.map((a) => (
+                       <div key={a.adm4_pcode} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSelectAdm4(a)}>
+                         <div className="font-medium">{a.adm4_pcode}</div>
+                         <div className="text-sm text-gray-500">Population: {a.pop_30min ?? 'N/A'}</div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
+             )}
             {searchError && (
               <p className="text-red-600 text-sm mt-2 px-4">{searchError}</p>
             )}
             {/* Suggestions list */}
-            {suggestions.length > 0 && (
+            {localMatches.length > 0 && (
               <div className="mt-2 bg-white rounded-md shadow-sm max-h-60 overflow-auto">
-                {suggestions.map((s) => (
+                {localMatches.map((s) => (
                   <button
                     key={s}
                     onClick={() => {
                       setSearchQuery(s);
-                      setSuggestions([]);
+                      setLocalMatches([]);
                     }}
                     className="w-full text-left px-4 py-2 hover:bg-gray-100"
                   >
