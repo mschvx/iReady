@@ -136,53 +136,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple POI search endpoint for client-side suggestions
-  app.get("/api/pois", async (req, res) => {
+  // Serve ToReceive area codes for local searching
+  app.get("/api/toreceive", async (_req, res) => {
     try {
-      const q = (req.query.q as string | undefined) || "";
-      const qLower = q.toLowerCase().trim();
-      const pois: Array<{ id: string; name: string; lat: number; lon: number; keywords?: string[] }> = require("./data/navotas_pois.json");
-      if (!qLower) {
-        return res.json({ results: pois.slice(0, 20) });
-      }
-      const results = pois.filter(p => {
-        if (p.name.toLowerCase().includes(qLower)) return true;
-        if ((p.keywords || []).some(k => k.toLowerCase().includes(qLower) || qLower.includes(k.toLowerCase()))) return true;
-        return false;
-      }).slice(0, 20);
-      res.json({ results });
-    } catch (err) {
-      console.error("POI search error:", err);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Search adm4 entries from Data/ToReceive.json
-  app.get("/api/adm4", async (req, res) => {
-    try {
-      const q = (req.query.q as string | undefined) || "";
-      const qLower = q.toLowerCase().trim();
-      // Load the ToReceive data from repository root
+      // Read the Data/ToReceive.json file from project root
+      // Use dynamic import to keep TS happy in ESM/CommonJS mix
       const path = require("path");
-      const toReceivePath = path.join(__dirname, "..", "..", "Data", "ToReceive.json");
-      const entries: Array<any> = require(toReceivePath);
-
-      if (!qLower) {
-        return res.json({ results: entries.slice(0, 20) });
+      const fs = require("fs");
+      const filePath = path.resolve(process.cwd(), "Data", "ToReceive.json");
+      if (!fs.existsSync(filePath)) {
+        return res.status(500).json({ message: "ToReceive data not found" });
       }
-
-      // Exact adm4_pcode match
-      const exact = entries.find(e => (e.adm4_pcode || "").toLowerCase() === qLower);
-      if (exact) {
-        return res.json({ results: [exact] });
-      }
-
-      // Partial match (adm4_pcode contains query) or start-with
-      const results = entries.filter(e => (e.adm4_pcode || "").toLowerCase().includes(qLower)).slice(0, 20);
-      res.json({ results });
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(raw) as Array<Record<string, any>>;
+      const codes = parsed.map((r) => r.adm4_pcode).filter(Boolean);
+      res.json({ codes });
     } catch (err) {
-      console.error("ADM4 search error:", err);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("/api/toreceive error:", err);
+      res.status(500).json({ message: "Failed to read ToReceive data" });
     }
   });
 
