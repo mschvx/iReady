@@ -135,7 +135,13 @@ export const SignUpOverlay = ({
           <div className="flex flex-col items-center gap-2 mt-3">
             <button
               type="button"
-              onClick={() => setLocation("/login")}
+              onClick={() => {
+                if (onOpenLogin) {
+                  onOpenLogin();
+                } else {
+                  setLocation("/login");
+                }
+              }}
               className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
             >
               Have an account? Log In Instead
