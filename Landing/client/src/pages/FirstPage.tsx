@@ -48,7 +48,7 @@ export const FirstPage = (): JSX.Element => {
         </Button>
         <Button
           onClick={handleLoginClick}
-          className="h-10 md:h-12 px-4 md:px-6 bg-sky-300 rounded-full hover:bg-blue-700 text-sm md:text-base text-shadow: 2px 2px 4px black;"
+          className="h-10 md:h-12 px-4 md:px-6 bg-blue-700 rounded-full hover:bg-sky-300 text-sm md:text-base text-shadow: 2px 2px 4px black;"
         >
           Log in
         </Button>
@@ -98,7 +98,7 @@ export const FirstPage = (): JSX.Element => {
         {/* Info About iReady Section */}
         <section
           id="about-section"
-          className="bg-black text-white py-16 md:py-24 px-6 md:px-16"
+          className="bg-black text-white py-16 md:py-32 px-6 md:px-16"
         >
           <div className="max-w-6xl">
             <p className="text-blue-300 font-semibold tracking-wide mb-2">PJDSC 2025 · INFORMATION</p>
@@ -137,7 +137,7 @@ export const FirstPage = (): JSX.Element => {
                   Prioritizes at-risk communities, estimates likely supply needs, and suggests staging and routing, so LGUs and NGOs can coordinate relief <em>before</em> landfall.
                 </p>
                 <div className="flex gap-3 flex-wrap">
-                  <Button onClick={handleLoginClick} className="bg-blue-600 hover:bg-blue-700">Get started</Button>
+                  <Button onClick={handleLoginClick} className="bg-blue-600 hover:bg-sky-300">Get started</Button>
                 </div>
               </div>
             </div>
@@ -147,7 +147,7 @@ export const FirstPage = (): JSX.Element => {
         </section>
 
         {/* Contact Info Section */}
-        <section className="bg-white py-16 md:py-24 px-6 md:px-16">
+        <section className="bg-white py-16 md:py-22 px-6 md:px-16">
           <div className="max-w-6xl">
             <h2 className="text-4xl md:text-5xl font-extrabold">Contact</h2>
             <p className="text-gray-600 mt-3 max-w-3xl">Questions, partnerships, or feedback? Reach out and we’ll get back to you.</p>
@@ -189,7 +189,7 @@ export const FirstPage = (): JSX.Element => {
             </div>
 
             <div className="mt-8">
-              <Button onClick={handleLoginClick} className="bg-blue-600 hover:bg-blue-700">Sign in to iReady</Button>
+              <Button onClick={handleLoginClick} className="bg-blue-600 hover:bg-sky-300">Sign in to iReady</Button>
             </div>
           </div>
         </section>

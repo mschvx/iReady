@@ -71,24 +71,29 @@ export const LogInOverlay = ({
         className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-2xl ring-1 ring-black/5 transform-gpu transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-8 w-full text-center">
-          <h1 className="font-extrabold text-black text-[44px] leading-none mb-2">
+        {/* Use a single column layout that is vertically ordered and centered */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col items-center justify-center gap-3 w-full max-w-[420px] mx-auto text-center"
+        >
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[40px] leading-tight mb-1">
             LOG IN
           </h1>
 
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-0 rounded">
+            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded">
               {error}
             </div>
           )}
 
-          <div className="flex flex-col gap-4 w-full">
+          {/* Inputs stacked in order, same width so the layout looks neat */}
+          <div className="flex flex-col gap-3 w-full">
             <Input
               type="text"
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              className="w-full h-[52px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
 
@@ -97,25 +102,24 @@ export const LogInOverlay = ({
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              className="w-full h-[52px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
           </div>
 
+          {/* Tight spacing between button and inputs */}
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[200px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
-            /* subtle lift on hover */
-            onMouseEnter={(e) => (e.currentTarget.parentElement!.parentElement!.classList.add("translate-y-0.5"))}
-            onMouseLeave={(e) => (e.currentTarget.parentElement!.parentElement!.classList.remove("translate-y-0.5"))}
+            className="w-[200px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg mt-2"
           >
-            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px] tracking-tight">
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[18px] tracking-tight">
               {isLoading ? "LOADING..." : "SUBMIT"}
             </span>
           </Button>
 
-          <div className="flex flex-col items-center gap-3 mt-6">
+          {/* Links directly below the submit with small gaps so order is clear */}
+          <div className="flex flex-col items-center gap-1 mt-2 w-full">
             <button
               type="button"
               onClick={() => {
@@ -125,7 +129,7 @@ export const LogInOverlay = ({
                   setLocation("/signup");
                 }
               }}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer"
             >
               New? Sign Up
             </button>
@@ -133,7 +137,7 @@ export const LogInOverlay = ({
             <button
               type="button"
               onClick={close}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[14px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[13px] bg-transparent border-0 cursor-pointer"
             >
               BACK
             </button>

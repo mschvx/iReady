@@ -82,8 +82,11 @@ export const SignUpOverlay = ({
         className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-2xl ring-1 ring-black/5 transform-gpu transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 w-full text-center">
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[44px] leading-none mb-3">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col items-center justify-center gap-3 w-full max-w-[420px] mx-auto text-center"
+        >
+          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[40px] leading-tight mb-1">
             SIGN UP
           </h1>
 
@@ -99,7 +102,7 @@ export const SignUpOverlay = ({
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              className="w-full h-[52px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
 
@@ -108,7 +111,7 @@ export const SignUpOverlay = ({
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              className="w-full h-[52px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
 
@@ -117,7 +120,7 @@ export const SignUpOverlay = ({
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full h-[56px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
+              className="w-full h-[52px] bg-[#f3f4f6] rounded-[40px] border-0 px-4 text-sm text-center"
               disabled={isLoading}
             />
           </div>
@@ -125,14 +128,14 @@ export const SignUpOverlay = ({
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
+            className="w-[200px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg mt-2"
           >
-            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[20px] tracking-tight">
+            <span className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[18px] tracking-tight">
               {isLoading ? "CREATING..." : "SUBMIT"}
             </span>
           </Button>
 
-          <div className="flex flex-col items-center gap-3 mt-4">
+          <div className="flex flex-col items-center gap-1 mt-2 w-full">
             <button
               type="button"
               onClick={() => {
@@ -142,7 +145,7 @@ export const SignUpOverlay = ({
                   setLocation("/login");
                 }
               }}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[16px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer"
             >
               Have an account? Log In Instead
             </button>
@@ -150,7 +153,7 @@ export const SignUpOverlay = ({
             <button
               type="button"
               onClick={close}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[14px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[13px] bg-transparent border-0 cursor-pointer"
             >
               BACK
             </button>
