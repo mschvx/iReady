@@ -145,7 +145,7 @@ export const SignUpOverlay = ({
                   setLocation("/login");
                 }
               }}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer "
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black font-style: italic text-[15px] bg-transparent border-0 cursor-pointer hover:underline hover:text-sky-600"
             >
               Have an account? Log In Instead
             </button>
@@ -153,7 +153,7 @@ export const SignUpOverlay = ({
             <button
               type="button"
               onClick={close}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[13px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-extrabold text-black text-[15px] bg-transparent border-0 cursor-pointer hover:underline hover:text-sky-600"
             >
               BACK
             </button>

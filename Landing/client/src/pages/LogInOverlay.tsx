@@ -26,7 +26,7 @@ export const LogInOverlay = ({
     setError("");
 
     if (!username || !password) {
-      setError("Username and password are required");
+      setError("Username and Password are required");
       return;
     }
 
@@ -129,7 +129,7 @@ export const LogInOverlay = ({
                   setLocation("/signup");
                 }
               }}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[15px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black font-style: italic text-[15px] bg-transparent border-0 cursor-pointer hover:underline hover:text-sky-600"
             >
               New? Sign Up
             </button>
@@ -137,7 +137,7 @@ export const LogInOverlay = ({
             <button
               type="button"
               onClick={close}
-              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[13px] bg-transparent border-0 cursor-pointer"
+              className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-extrabold text-black text-[15px] bg-transparent border-0 cursor-pointer hover:underline hover:text-sky-600"
             >
               BACK
             </button>
