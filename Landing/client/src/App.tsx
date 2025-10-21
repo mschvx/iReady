@@ -14,14 +14,30 @@ import { Account } from "@/pages/Account";
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      <Route path="/" component={FirstPage} />
-      <Route path="/login" component={LogInOverlay} />
-      <Route path="/signup" component={SignUpOverlay} />
-      <Route path="/home" component={Home} />
-      <Route path="/account" component={Account} />
+      <Route path="/">
+        <FirstPage />
+      </Route>
+
+      <Route path="/login">
+        <LogInOverlay />
+      </Route>
+
+      <Route path="/signup">
+        <SignUpOverlay />
+      </Route>
+
+      <Route path="/home">
+        <Home />
+      </Route>
+
+      <Route path="/account">
+        <Account />
+      </Route>
+
       {/* Fallback to 404 */}
-      <Route component={NotFound} />
+      <Route>
+        <NotFound />
+      </Route>
     </Switch>
   );
 }
