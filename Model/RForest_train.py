@@ -147,6 +147,8 @@ def train_rf_model():
         'toiletries', 'detergent_cleaning_agents', 'waste_bags', 'portable_toilets', 'disinfectant_sprays'
     ]
 
+
+
     # item category factors — roughly how many units per 100 people
     category_factor = {
         'medical': 0.5,  # items per 100 people (low)
@@ -173,9 +175,9 @@ def train_rf_model():
         grp = item_group[s]
         base_factor = category_factor.get(grp, 1.0)
         # need index: higher when wealth low, access low, disease high
-        need_index = (1 - features['wealth_mean'].astype(float).fillna(0)) * 0.5
-        need_index += (1 - features['access_pct_30min'].astype(float).fillna(50) / 100.0) * 0.3
-        need_index += features['disease_risk'].astype(float).fillna(0) * 0.2
+        need_index = (1 - features['wealth_mean'].astype(float).fillna(0)) * 0.6
+        need_index += (1 - features['access_pct_30min'].astype(float).fillna(50) / 100.0) * 0.4
+        need_index += features['disease_risk'].astype(float).fillna(0) * 0.3
         need_index = need_index.clip(0.05, 1.5)
 
         # evac_size proxy — scale down large population numbers so results stay <500

@@ -78,3 +78,4 @@ with open(output_path, 'w') as f:
 
 print(f"\n=== Predictions saved to {output_path} ===")
 print(f"Total predictions: {len(output_data)}")
+
