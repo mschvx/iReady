@@ -71,13 +71,13 @@ export const LogInOverlay = ({
         className="relative w-full max-w-md bg-white border border-black/5 rounded-2xl p-6 mx-auto shadow-2xl ring-1 ring-black/5 transform-gpu transition-transform duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4 w-full text-center">
-          <h1 className="[font-family:'Akira_Expanded-SuperBold',Helvetica] font-bold text-black text-[44px] leading-none mb-2">
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-8 w-full text-center">
+          <h1 className="font-extrabold text-black text-[44px] leading-none mb-2">
             LOG IN
           </h1>
 
           {error && (
-            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-0 rounded">
               {error}
             </div>
           )}
@@ -105,7 +105,7 @@ export const LogInOverlay = ({
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-[220px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
+            className="w-[200px] bg-[#d9d9d9]/95 rounded-[40px] py-3 hover:bg-[#c9c9c9]/95 shadow-lg"
             /* subtle lift on hover */
             onMouseEnter={(e) => (e.currentTarget.parentElement!.parentElement!.classList.add("translate-y-0.5"))}
             onMouseLeave={(e) => (e.currentTarget.parentElement!.parentElement!.classList.remove("translate-y-0.5"))}
