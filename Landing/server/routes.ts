@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import session from "express-session";
 import bcrypt from "bcryptjs";
 import { insertUserSchema } from "@shared/schema";
+import fs from "fs";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const SESSION_SECRET = process.env.SESSION_SECRET || "dev-secret-change-me";
@@ -136,53 +138,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple POI search endpoint for client-side suggestions
-  app.get("/api/pois", async (req, res) => {
+  // Serve ToReceive area codes for local searching
+  app.get("/api/toreceive", async (_req, res) => {
     try {
-      const q = (req.query.q as string | undefined) || "";
-      const qLower = q.toLowerCase().trim();
-      const pois: Array<{ id: string; name: string; lat: number; lon: number; keywords?: string[] }> = require("./data/navotas_pois.json");
-      if (!qLower) {
-        return res.json({ results: pois.slice(0, 20) });
+      // Read the Data/ToReceive.json file from repository root
+      const filePath = path.resolve(__dirname, "..", "..", "Data", "ToReceive.json");
+      if (!fs.existsSync(filePath)) {
+        return res.status(500).json({ message: "ToReceive data not found" });
       }
-      const results = pois.filter(p => {
-        if (p.name.toLowerCase().includes(qLower)) return true;
-        if ((p.keywords || []).some(k => k.toLowerCase().includes(qLower) || qLower.includes(k.toLowerCase()))) return true;
-        return false;
-      }).slice(0, 20);
-      res.json({ results });
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(raw) as Array<Record<string, any>>;
+      const codes = parsed.map((r) => r.adm4_pcode).filter(Boolean);
+      res.json({ codes });
     } catch (err) {
-      console.error("POI search error:", err);
-      res.status(500).json({ message: "Internal server error" });
+      console.error("/api/toreceive error:", err);
+      res.status(500).json({ message: "Failed to read ToReceive data" });
     }
   });
 
-  // Search adm4 entries from Data/ToReceive.json
-  app.get("/api/adm4", async (req, res) => {
+  // Reverse lookup wrapper to classify if a point is water (keyword-based)
+  app.get('/api/reverse', async (req, res) => {
     try {
-      const q = (req.query.q as string | undefined) || "";
-      const qLower = q.toLowerCase().trim();
-      // Load the ToReceive data from repository root
-      const path = require("path");
-      const toReceivePath = path.join(__dirname, "..", "..", "Data", "ToReceive.json");
-      const entries: Array<any> = require(toReceivePath);
-
-      if (!qLower) {
-        return res.json({ results: entries.slice(0, 20) });
-      }
-
-      // Exact adm4_pcode match
-      const exact = entries.find(e => (e.adm4_pcode || "").toLowerCase() === qLower);
-      if (exact) {
-        return res.json({ results: [exact] });
-      }
-
-      // Partial match (adm4_pcode contains query) or start-with
-      const results = entries.filter(e => (e.adm4_pcode || "").toLowerCase().includes(qLower)).slice(0, 20);
-      res.json({ results });
+      const lat = req.query.lat as string | undefined;
+      const lon = req.query.lon as string | undefined;
+      if (!lat || !lon) return res.status(400).json({ message: 'lat and lon required' });
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=10&addressdetails=0`;
+      const response = await fetch(url, { headers: { 'User-Agent': 'iReady-App/1.0' } });
+      if (!response.ok) return res.status(502).json({ message: 'Reverse geocode failed' });
+      const data = await response.json();
+      const display = (data.display_name || '').toLowerCase();
+      const waterKeywords = ['sea','bay','ocean','lake','river','channel','canal','marina','harbor','harbour'];
+      const isWater = waterKeywords.some(k => display.includes(k));
+      res.json({ displayName: data.display_name || null, isWater });
     } catch (err) {
-      console.error("ADM4 search error:", err);
-      res.status(500).json({ message: "Internal server error" });
+      console.error('/api/reverse error:', err);
+      res.status(500).json({ message: 'Reverse lookup failed' });
     }
   });
 

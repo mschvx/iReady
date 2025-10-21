@@ -1,4 +1,49 @@
 import React, { useEffect, useState } from "react";
+// Navotas bounding box (approx): lat 14.65 to 14.72, lon 120.90 to 121.00
+const NAVOTAS_BOUNDS = {
+  minLat: 14.65,
+  maxLat: 14.72,
+  minLon: 120.90,
+  maxLon: 121.00,
+};
+
+type BarangayCenter = {
+  adm4_pcode: string;
+  lat: number;
+  lon: number;
+};
+
+// Fallback random centers (used only until we load actual areaCodes)
+const fallbackBarangayCenters: BarangayCenter[] = Array.from({ length: 50 }, (_, i) => ({
+  adm4_pcode: `PH170000000${(i + 1).toString().padStart(2, "0")}`,
+  lat:
+    NAVOTAS_BOUNDS.minLat +
+    Math.random() * (NAVOTAS_BOUNDS.maxLat - NAVOTAS_BOUNDS.minLat),
+  lon:
+    NAVOTAS_BOUNDS.minLon +
+    Math.random() * (NAVOTAS_BOUNDS.maxLon - NAVOTAS_BOUNDS.minLon),
+}));
+
+// Tighter land-only bounds inside Navotas to reduce chance of water placement
+const NAVOTAS_LAND_BOUNDS = {
+  minLat: 14.655,
+  maxLat: 14.695,
+  minLon: 120.94,
+  maxLon: 120.99,
+};
+
+function getLatLonForCode(code: string): { lat: number; lon: number } {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < code.length; i++) {
+    h ^= code.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const t = (h % 100000) / 100000;
+  const u = ((h >>> 7) % 100000) / 100000;
+  const lat = NAVOTAS_LAND_BOUNDS.minLat + t * (NAVOTAS_LAND_BOUNDS.maxLat - NAVOTAS_LAND_BOUNDS.minLat);
+  const lon = NAVOTAS_LAND_BOUNDS.minLon + u * (NAVOTAS_LAND_BOUNDS.maxLon - NAVOTAS_LAND_BOUNDS.minLon);
+  return { lat, lon };
+}
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 
@@ -24,6 +69,15 @@ export const Home = (): JSX.Element => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [areaCodes, setAreaCodes] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  // derive centers from areaCodes (first 50) or fallback
+  const barangayCenters: BarangayCenter[] = (areaCodes && areaCodes.length > 0)
+    ? areaCodes.slice(0, 50).map((c) => {
+        const { lat, lon } = getLatLonForCode(c);
+        return { adm4_pcode: c, lat, lon };
+      })
+    : fallbackBarangayCenters;
   const [mapCenter, setMapCenter] = useState({ lat: 14.6094, lon: 120.9942 });
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
@@ -35,7 +89,17 @@ export const Home = (): JSX.Element => {
 
   useEffect(() => {
     checkAuth();
-    loadSupplies();
+    // fetch local toreceive area codes for simple search
+    (async () => {
+      try {
+        const resp = await fetch('/api/toreceive');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (Array.isArray(data.codes)) setAreaCodes(data.codes);
+      } catch (err) {
+        // ignore
+      }
+    })();
   }, []);
 
   const checkAuth = async () => {
@@ -259,11 +323,42 @@ export const Home = (): JSX.Element => {
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lon - 0.01}%2C${mapCenter.lat - 0.01}%2C${mapCenter.lon + 0.01}%2C${mapCenter.lat + 0.01}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lon}`}
             width="100%"
             height="100%"
-            style={{ border: 0 }}
+            style={{ border: 0, position: 'absolute', left: 0, top: 0, zIndex: 0 }}
             title="Philippines Map"
           />
-          
-          <button className="absolute left-2 bottom-8 bg-[#93c5fd] px-6 py-2 rounded-xl text-white text-lg hover:bg-[#7ab8f7]">
+          {/* Overlay barangay centers as blue dots */}
+          <div
+            className="absolute inset-0"
+            style={{ pointerEvents: 'none', zIndex: 2 }}
+          >
+            {barangayCenters.map((b) => {
+              // Convert lat/lon to x/y relative to the map bounding box
+              const x = ((b.lon - (mapCenter.lon - 0.01)) / 0.02) * 100;
+              const y = (1 - (b.lat - (mapCenter.lat - 0.01)) / 0.02) * 100;
+              // Only render if within bounds
+              if (x < 0 || x > 100 || y < 0 || y > 100) return null;
+              return (
+                <div
+                  key={b.adm4_pcode}
+                  style={{
+                    position: "absolute",
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: 16,
+                    height: 16,
+                    background: "#2563eb",
+                    borderRadius: "50%",
+                    border: "2px solid #fff",
+                    boxShadow: "0 0 4px #0003",
+                    zIndex: 3,
+                  }}
+                  title={b.adm4_pcode}
+                />
+              );
+            })}
+          </div>
+          <button className="absolute left-2 bottom-8 bg-[#93c5fd] px-6 py-2 rounded-xl text-white text-lg hover:bg-[#7ab8f7]" style={{ zIndex: 10 }}>
             go back
           </button>
         </div>
@@ -277,8 +372,17 @@ export const Home = (): JSX.Element => {
                 type="text"
                 placeholder="Search barangay or location..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const v = e.target.value;
+                  setSearchQuery(v);
+                  // update suggestions from areaCodes (simple substring match)
+                  const q = v.trim().toLowerCase();
+                  if (!q) {
+                    setSuggestions([]);
+                  } else {
+                    const matches = areaCodes.filter((c) => c.toLowerCase().includes(q)).slice(0, 10);
+                    setSuggestions(matches);
+                  }
                   setSearchError("");
                 }}
                 onKeyPress={handleKeyPress}
@@ -315,6 +419,23 @@ export const Home = (): JSX.Element => {
             )}
             {searchError && (
               <p className="text-red-600 text-sm mt-2 px-4">{searchError}</p>
+            )}
+            {/* Suggestions list */}
+            {suggestions.length > 0 && (
+              <div className="mt-2 bg-white rounded-md shadow-sm max-h-60 overflow-auto">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setSearchQuery(s);
+                      setSuggestions([]);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
