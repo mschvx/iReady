@@ -28,7 +28,7 @@ export const FirstPage = (): JSX.Element => {
   return (
     <div className="bg-white w-full min-h-screen">
       {/* Fixed Header with iReady Logo (smaller, vertically centered on the left) */}
-      <header className="fixed top-0 left-0 w-full h-10 md:h-20 lg:h-24 z-[4000] bg-black shadow-none border-b-0 flex items-center">
+      <header className="fixed top-0 left-0 w-full h-18 md:h-20 lg:h-24 z-[4000] bg-black shadow-none border-b-0 flex items-center">
         <div className="pl-4 md:pl-6 lg:pl-8">
           <img
             className="h-18 md:h-20 lg:h-22 w-auto block"
