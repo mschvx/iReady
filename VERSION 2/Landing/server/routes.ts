@@ -141,12 +141,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve ToReceive area codes for local searching
   app.get("/api/toreceive", async (_req, res) => {
     try {
-      // Read the Data/ToReceive.json file from repository root
-      const filePath = path.resolve(__dirname, "..", "..", "Data", "ToReceive.json");
-      if (!fs.existsSync(filePath)) {
+      // Read the Data/ToReceive.json file from repository root. Use process.cwd()
+      // so this works regardless of how Node resolves __dirname under ESM.
+  // The authoritative ToReceive.json lives in the repository root's parent (VERSION 2/Data)
+  // when running from the Landing folder. Resolve to ../Data/ToReceive.json
+  const dataFile = path.resolve(process.cwd(), "..", "Data", "ToReceive.json");
+      if (!fs.existsSync(dataFile)) {
         return res.status(500).json({ message: "ToReceive data not found" });
       }
-      const raw = fs.readFileSync(filePath, "utf-8");
+      const raw = fs.readFileSync(dataFile, "utf-8");
       const parsed = JSON.parse(raw) as Array<Record<string, any>>;
       const codes = parsed.map((r) => r.adm4_pcode).filter(Boolean);
       res.json({ codes });
@@ -155,6 +158,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to read ToReceive data" });
     }
   });
+
+  // Also serve the raw ToReceive.json so client-side code can fetch it from
+  // /ToReceive.json or /data/ToReceive.json (keeps existing UI unchanged).
+  const serveToReceiveRaw = (req: any, res: any) => {
+    try {
+  const dataFile = path.resolve(process.cwd(), "..", "Data", "ToReceive.json");
+      if (!fs.existsSync(dataFile)) {
+        return res.status(404).json({ message: "ToReceive.json not found" });
+      }
+      const raw = fs.readFileSync(dataFile, "utf-8");
+      // send as application/json so browser fetch() can parse it directly
+      res.setHeader('Content-Type', 'application/json');
+      return res.send(raw);
+    } catch (err) {
+      console.error("/ToReceive.json error:", err);
+      return res.status(500).json({ message: "Failed to read ToReceive.json" });
+    }
+  };
+
+  app.get('/ToReceive.json', serveToReceiveRaw);
+  app.get('/data/ToReceive.json', serveToReceiveRaw);
 
   // POI search endpoint
   app.get("/api/pois", async (req, res) => {
